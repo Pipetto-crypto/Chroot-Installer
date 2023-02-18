@@ -10,47 +10,73 @@ CONFIG_DIR=~/.chroot_installer
 ANDROIDVERSION=$(getprop ro.build.version.release | cut -f1,2 -d '.')
 ARG1=$1
 ARG2=$2
+ARG3=$3
 CONFIG_FILE=$CONFIG_DIR/$ARG1.conf
 
-if [[ "$(su -c busybox)" =~ "not found" ]]
-then 
-	echo "Busybox not available,please install busybox before using this installer"
-	exit 0
-fi
+make_image(){
 
-#exec > >(tee log.txt) 2>&1
+   echo -e "\nCreating the rootfs image, requires at least 8GB of storage\n"
+    read -p "Select an image name: " IMGNAME
+    read -p "Select an installation path: " SPATH
+    read -p "Select image size in megabytes: " SIZE
+
+    INSPATH=$SPATH/$IMGNAME.img
+    SIZEKB=$(($SIZE*1000))
+    COUNT=$(($SIZEKB/4))
+
+    echo "INSPATH=$INSPATH" > $CONFIG_FILE
+
+    if findmnt $CHROOT_DIR >/dev/null
+    then
+        sudo umount -l $CHROOT_DIR
+    fi
+
+    if [ ! -f $INSPATH ] || (( "$(du --apparent-size -k $INSPATH | cut -f1)" < $SIZE ))
+    then
+        sudo dd if=/dev/zero of=$INSPATH bs=4k count=$COUNT
+    fi
+    sudo mkfs.ext4 $INSPATH
+    sudo tune2fs -O ^metadata_csum $INSPATH
+    sudo tune2fs -i0 -c0 $INSPATH
+    sudo mount -o loop $INSPATH $CHROOT_DIR
+    sudo tar --skip-old-files -xjf $ROOTFS -C $CHROOT_DIR
+    sudo umount -l $CHROOT_DIR
+}
+
+make_folder(){
+
+  INSPATH=~/rootfs
+  mkdir -p $INSPATH
+  sudo chmod 755 $INSPATH
+  sudo chown 0:0 $INSPATH
+  sudo tar --skip-old-files -xjf $ROOTFS -C $INSPATH
+  echo "INSPATH=$INSPATH" > $CONFIG_FILE
+	
+}
+
+if [[ "$(su -c busybox)" =~ "not found" ]]
+then
+    echo "Busybox not available,please install busybox before using this installer"
+    exit 0
+fi
 
 if (( $(echo "$ANDROIDVERSION>12" | bc -l) ))
 then
-	if [ "$(su -c settings get global settings_enable_monitor_phantom_procs)" == "true" ]
-	then
-		echo -e "Android 12.1 or greater detected, disabling phantom processes killer"
-		su -c settings put global settings_enable_monitor_phantom_procs false
-	fi
+    if [ "$(su -c settings get global settings_enable_monitor_phantom_procs)" == "true" ]
+    then
+        echo -e "Android 12.1 or greater detected, disabling phantom processes killer"
+        su -c settings put global settings_enable_monitor_phantom_procs false
+    fi
 fi
 
-echo -e "\nCloning the repo"
 
-#git clone https://github.com/Pipetto-crypto/Chroot-Docs.git
-#cd Chroot-Docs
 
-echo -e "\nInstalling all dependencies and setting up storage permissions\n"
-
-pkg update
-pkg install x11-repo root-repo -y
-pkg install pulseaudio bindfs tsu openssh openssl xwayland megatools mount-utils git wget -y
-
-if [ ! -d ~/storage ]
-then
-	termux-setup-storage
-fi
-
-if [ "$ARG1" == "--custom" ]
+if [ "$ARG2" == "--custom" ]
 then
 	echo -e "\nUsing user selected rootfs"
-	ROOTFS=$ARG2
+	ROOTFS=$ARG3
 else
-	echo -e "\nDownloading debian rootfs"
+	echo -e "\nDownloading default debian rootfs"
 	if [ ! -f /sdcard/debian.tar.bz2 ]
 	then
 		megadl https://mega.nz/file/cV5ClJrb#h5UvcIdiLq2zFncGYBe3lBL3QjauJFmLupu2faKvFUY --path=/sdcard
@@ -58,28 +84,7 @@ else
 	fi
 fi
 
-if ! su -c pm list packages | grep -q com.termux.x11
-then 
-	echo -e "\nInstalling Termux-X11"
-
-	if ! grep -qF "allow-external-apps = true" ~/.termux/termux.properties
-	then
-		echo 'allow-external-apps = true' >> ~/.termux/termux.properties
-	fi
-	termux-reload-settings
-	cp termux-x11/termux-x11.zip .
-	unzip termux-x11.zip
-	dpkg -i --force-depends termux-x11.deb
-	sudo pm install -g app-debug.apk
-	sudo rm -rf termux-x11.zip app-debug.apk output-metadata.json termux-x11.deb
-	if (( $(echo "$ANDROIDVERSION <= 10" | bc -l) ))
-	then
-		echo -e "\nAndroid 10 or lower detected, proceeding to toggle immersive mode for Termux:X11"
-		su -c settings put global policy_control immersive.full=com.termux.x11
-	fi
-fi
-
-echo -e "\nBeggining installation of the rootfs\n"
+echo -e "\nInitialization installation of the rootfs\n"
 
 cp setup/chroot-launcher .
 sudo mkdir -p $CHROOT_DIR
@@ -91,41 +96,12 @@ read -p "Select an installation method: " INSMETHOD
 
 if [ "$INSMETHOD" == "file" ]
 then
-	echo -e "\nCreating the rootfs image, requires at least 8GB of storage\n"
-	read -p "Select an image name: " IMGNAME
-	read -p "Select an installation path: " SPATH
-	read -p "Select image size in megabytes: " SIZE
 
-	INSPATH=$SPATH/$IMGNAME.img
-	SIZEKB=$(($SIZE*1000))
-	COUNT=$(($SIZEKB/4))
-
-	echo "INSPATH=$INSPATH" > $CONFIG_FILE
-
-	if findmnt $CHROOT_DIR >/dev/null
-	then
-		sudo umount -l $CHROOT_DIR
-	fi
-
-	if [ ! -f $INSPATH ] || (( "$(du --apparent-size -k $INSPATH | cut -f1)" < $SIZEKB ))
-	then
-		sudo dd if=/dev/zero of=$INSPATH bs=4k count=$COUNT
-	fi
-	sudo mkfs.ext4 $INSPATH
-	sudo tune2fs -O ^metadata_csum $INSPATH
-	sudo tune2fs -i0 -c0 $INSPATH
-	sudo mount -o loop $INSPATH $CHROOT_DIR
-	sudo tar --skip-old-files -xjf $ROOTFS -C $CHROOT_DIR
-	sudo umount -l $CHROOT_DIR
+	make_image
 
 else
-	INSPATH=~/rootfs
-	mkdir -p $INSPATH
-	sudo chmod 755 $INSPATH
-	sudo chown 0:0 $INSPATH
-	sudo tar --skip-old-files -xjf $ROOTFS -C $INSPATH
-	echo "INSPATH=$INSPATH" > $CONFIG_FILE
 	
+	make_folder
 fi
 
 echo -e "\nMounting the container"
