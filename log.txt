@@ -1,0 +1,15 @@
+(standard_in) 1: syntax error
+
+Cloning the repo
+
+Installing all dependencies and setting up storage permissions
+
+Checking availability of current mirror:
+[*] https://packages-cf.termux.dev/apt/termux-main: ok
+
+WARNING: apt does not have a stable CLI interface. Use with caution in scripts.
+
+Get:1 https://packages-cf.termux.dev/apt/termux-main stable InRelease [14.0 kB]
+Hit:2 https://packages-cf.termux.dev/apt/termux-root root InRelease
+Get:3 https://packages-cf.termux.dev/apt/termux-x11 x11 InRelease [14.0 kB]
+Get:4 https://packages-cf.termux.dev/apt/termux-main stable/main aarch64 Packages [488 kB]

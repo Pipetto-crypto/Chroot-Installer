@@ -1,0 +1,211 @@
+#!/bin/bash
+
+echo -e "WARNING: THIS SCRIPT IS UNTESTED ON ANDROID VERSIONS NEWER THAN 10, SO IT MAY NOT WORK. ISSUES ABOUT NOT WORKING ON NEWER ANDROID VERSIONS WILL ONLY BE ACCEPTED WHEN PROPER LOGS ARE PROVIDED"
+echo -e "\nWARNING: TERMUX:X11 APP MAY NOT WORK IN A CHROOT DEPENDING ON YOUR ANDROID VERSION. NO ISSUES WILL BE ACCEPTED ABOUT TERMUX:X11 AS THEY AREN'T RELATED TO THIS SCRIPT"
+#sleep 10
+clear
+
+CHROOT_DIR=/data/local/mnt
+CONFIG_DIR=~/.chroot_installer
+ANDROIDVERSION=$(getprop ro.build.version.release | cut -f1,2 -d '.')
+ARG1=$1
+ARG2=$2
+CONFIG_FILE=$CONFIG_DIR/$ARG1.conf
+
+if [[ "$(su -c busybox)" =~ "not found" ]]
+then 
+	echo "Busybox not available,please install busybox before using this installer"
+	exit 0
+fi
+
+#exec > >(tee log.txt) 2>&1
+
+if (( $(echo "$ANDROIDVERSION>12" | bc -l) ))
+then
+	if [ "$(su -c settings get global settings_enable_monitor_phantom_procs)" == "true" ]
+	then
+		echo -e "Android 12.1 or greater detected, disabling phantom processes killer"
+		su -c settings put global settings_enable_monitor_phantom_procs false
+	fi
+fi
+
+echo -e "\nCloning the repo"
+
+#git clone https://github.com/Pipetto-crypto/Chroot-Docs.git
+#cd Chroot-Docs
+
+echo -e "\nInstalling all dependencies and setting up storage permissions\n"
+
+pkg update
+pkg install x11-repo root-repo -y
+pkg install pulseaudio bindfs tsu openssh openssl xwayland megatools mount-utils git wget -y
+
+if [ ! -d ~/storage ]
+then
+	termux-setup-storage
+fi
+
+if [ "$ARG1" == "--custom" ]
+then
+	echo -e "\nUsing user selected rootfs"
+	ROOTFS=$ARG2
+else
+	echo -e "\nDownloading debian rootfs"
+	if [ ! -f /sdcard/debian.tar.bz2 ]
+	then
+		megadl https://mega.nz/file/cV5ClJrb#h5UvcIdiLq2zFncGYBe3lBL3QjauJFmLupu2faKvFUY --path=/sdcard
+		ROOTFS=/sdcard/debian.tar.bz2
+	fi
+fi
+
+if ! su -c pm list packages | grep -q com.termux.x11
+then 
+	echo -e "\nInstalling Termux-X11"
+
+	if ! grep -qF "allow-external-apps = true" ~/.termux/termux.properties
+	then
+		echo 'allow-external-apps = true' >> ~/.termux/termux.properties
+	fi
+	termux-reload-settings
+	cp termux-x11/termux-x11.zip .
+	unzip termux-x11.zip
+	dpkg -i --force-depends termux-x11.deb
+	sudo pm install -g app-debug.apk
+	sudo rm -rf termux-x11.zip app-debug.apk output-metadata.json termux-x11.deb
+	if (( $(echo "$ANDROIDVERSION <= 10" | bc -l) ))
+	then
+		echo -e "\nAndroid 10 or lower detected, proceeding to toggle immersive mode for Termux:X11"
+		su -c settings put global policy_control immersive.full=com.termux.x11
+	fi
+fi
+
+echo -e "\nBeggining installation of the rootfs\n"
+
+cp setup/chroot-launcher .
+sudo mkdir -p $CHROOT_DIR
+sudo chown 755 $CHROOT_DIR
+mkdir -p $CONFIG_DIR
+touch $CONFIG_FILE
+read -p "Select an installation method: " INSMETHOD
+
+
+if [ "$INSMETHOD" == "file" ]
+then
+	echo -e "\nCreating the rootfs image, requires at least 8GB of storage\n"
+	read -p "Select an image name: " IMGNAME
+	read -p "Select an installation path: " SPATH
+	read -p "Select image size in megabytes: " SIZE
+
+	INSPATH=$SPATH/$IMGNAME.img
+	SIZEKB=$(($SIZE*1000))
+	COUNT=$(($SIZEKB/4))
+
+	echo "INSPATH=$INSPATH" > $CONFIG_FILE
+
+	if findmnt $CHROOT_DIR >/dev/null
+	then
+		sudo umount -l $CHROOT_DIR
+	fi
+
+	if [ ! -f $INSPATH ] || (( "$(du --apparent-size -k $INSPATH | cut -f1)" < $SIZEKB ))
+	then
+		sudo dd if=/dev/zero of=$INSPATH bs=4k count=$COUNT
+	fi
+	sudo mkfs.ext4 $INSPATH
+	sudo tune2fs -O ^metadata_csum $INSPATH
+	sudo tune2fs -i0 -c0 $INSPATH
+	sudo mount -o loop $INSPATH $CHROOT_DIR
+	sudo tar --skip-old-files -xjf $ROOTFS -C $CHROOT_DIR
+	sudo umount -l $CHROOT_DIR
+
+else
+	INSPATH=~/rootfs
+	mkdir -p $INSPATH
+	sudo chmod 755 $INSPATH
+	sudo chown 0:0 $INSPATH
+	sudo tar --skip-old-files -xjf $ROOTFS -C $INSPATH
+	echo "INSPATH=$INSPATH" > $CONFIG_FILE
+	
+fi
+
+echo -e "\nMounting the container"
+
+if findmnt $CHROOT_DIR >/dev/null
+then
+	sudo umount -l $CHROOT_DIR
+fi
+
+if [ "$INSMETHOD" == "file" ] 
+then
+	sudo mount -o loop $INSPATH $CHROOT_DIR
+else
+	sudo mount --bind $INSPATH $CHROOT_DIR
+	sudo mount -o remount,bind,suid,exec $CHROOT_DIR
+fi 
+for i in dev proc sys dev/pts dev/tty
+do
+	sudo busybox mount --bind /$i $CHROOT_DIR/$i
+done
+		
+echo -e "\nInitial setup\n"
+
+read -p "Input an username: " USRNAME
+echo "USERNAME=$USRNAME" >> $CONFIG_FILE
+sudo cp $PREFIX/etc/resolv.conf $CHROOT_DIR/etc
+echo "localhost" | sudo tee -a $CHROOT_DIR/etc/hostname >/dev/null 2>&1
+su -c busybox chroot $CHROOT_DIR "/usr/sbin/useradd --create-home $USRNAME"
+su -c busybox chroot $CHROOT_DIR "/usr/bin/passwd $USRNAME"
+su -c busybox chroot $CHROOT_DIR "/usr/sbin/groupadd -g 3001 aid_net_bt_admin"
+su -c busybox chroot $CHROOT_DIR "/usr/sbin/groupadd -g 3002 aid_net_bt"
+su -c busybox chroot $CHROOT_DIR "/usr/sbin/groupadd -g 3003 aid_inet"
+su -c busybox chroot $CHROOT_DIR "/usr/sbin/groupadd -g 3004 aid_net_raw"
+su -c busybox chroot $CHROOT_DIR "/usr/sbin/groupadd -g 3005 aid_net_admin"
+su -c busybox chroot $CHROOT_DIR "/usr/sbin/usermod -aG sudo $USRNAME"
+su -c busybox chroot $CHROOT_DIR "/usr/sbin/usermod -aG aid_inet,aid_net_raw,aid_net_admin,aid_net_bt,aid_net_bt_admin $USRNAME"
+su -c busybox chroot $CHROOT_DIR "/usr/sbin/usermod -aG aid_inet,aid_net_raw,aid_net_admin,aid_net_bt,aid_net_bt_admin root"
+su -c busybox chroot $CHROOT_DIR "/usr/sbin/usermod -g 3003 _apt"
+
+
+echo -e "\nCopying installation scripts and required files to the chroot"
+
+sudo mkdir -p $CHROOT_DIR/home/$USRNAME/scripts
+sudo cp setup/*.sh $CHROOT_DIR/home/$USRNAME/scripts
+sudo chmod -R a+rwx $CHROOT_DIR/home/$USRNAME/scripts
+
+echo -e "\nInstalling required dependencies"
+
+su -c busybox chroot $CHROOT_DIR /usr/bin/sudo -u root -i "apt update"
+su -c busybox chroot $CHROOT_DIR /usr/bin/sudo -u root -i "apt install wget gnupg2 xwayland -y"
+
+echo -e "\nAppending important env variables to profile and setting bash as the main shell"
+
+su -c busybox chroot $CHROOT_DIR  /usr/bin/sudo -u $USRNAME -i "bash -c /home/$USRNAME/scripts/setup_env.sh"
+
+echo -e "\nInstalling vnc and icewm\n"
+
+su -c busybox chroot $CHROOT_DIR /usr/bin/sudo -u $USRNAME -i "bash -c /home/$USRNAME/scripts/install_vnc.sh"
+
+echo -e "\nInstalling box64 and box86\n"
+
+su -c busybox chroot $CHROOT_DIR /usr/bin/sudo -u $USRNAME -i "bash -c /home/$USRNAME/scripts/install_box.sh"
+
+if [ -d /proc/sys/fs/binfmt_misc ]
+then
+		sudo busybox mount --bind /proc/sys/fs/binfmt_misc $CHROOT_DIR/proc/sys/fs/binfmt_misc
+		echo -e "\nInstalling binfmt entries"
+		su -c busybox chroot $CHROOT_DIR /usr/bin/sudo -u root -i "apt install binfmt-support -y"
+		sudo cp binfmt-confs/box86 binfmt-confs/box64  $CHROOT_DIR/usr/share/binfmts
+		su -c busybox chroot $CHROOT_DIR /usr/bin/sudo -u root -i "update-binfmts --import"
+		
+fi
+
+echo -e "\nFirst setup completed, stopping the chroot"
+
+sudo umount -l $CHROOT_DIR
+
+echo -e "\nCopying the chroot-launcher script"
+
+cp chroot-launcher $PATH
+chmod +x $PATH/chroot-launcher
+
+

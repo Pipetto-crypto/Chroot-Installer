@@ -1,0 +1,176 @@
+#!/bin/bash
+
+CONFIG_DIR=~/.chroot_installer
+CONFIG="$CONFIG_DIR/$(echo $@ | awk '{ print $NF }').conf"
+USERNAME=$(cat $CONFIG | awk -F '='  '/USERNAME/{print $2}')
+CHROOT_DIR=/data/local/mnt
+INTERNAL_STORAGE=/sdcard
+#INSPATH=$(echo $@ | awk '{ print $NF }')
+INSPATH=$(cat $CONFIG | awk -F '=' '/INSPATH/{print $2}')
+ANDROIDVERSION=$(getprop ro.build.version.release)
+
+if [ -f $INSPATH ]
+then
+	INSMETHOD="file"
+fi
+
+
+if [[ "$(su -c busybox)" =~ "not found" ]]
+  then
+      echo "Busybox not found, install busybox if you want to be able to launch your chroot"
+      exit 0
+  fi
+
+if [ "$ANDROIDVERSION" == "12" ]
+then
+	if ! su -c device_config get activity_manager max_phantom_processes | grep -q "2147483647"
+	then
+		su -c device_config put activity_manager max_phantom_processes 2147483647
+	fi
+fi		
+
+
+if [ -n "$(sudo ls -A /mnt/media_rw)" ]
+then
+	EXTERNAL_STORAGE=/mnt/media_rw/$(sudo ls /mnt/media_rw)
+fi
+
+ARG1=$1
+ARG2=$2
+
+
+#This function contains the commands required to start the Xwayland socket in the chroot.
+
+xwayland(){
+
+echo "Creating the socket"
+
+sudo mkdir -p $CHROOT_DIR/tmp/runtime-$USERNAME
+su -c busybox chroot $CHROOT_DIR /usr/bin/sudo -u root -i "chown $USERNAME:$USERNAME /tmp/runtime-$USERNAME"
+taskset -c 4-7 termux-x11 &  
+sleep 20
+sudo touch $CHROOT_DIR/tmp/runtime-$USERNAME/wayland-0
+sudo busybox mount --bind $TMPDIR/wayland-0 $CHROOT_DIR/tmp/runtime-$USERNAME/wayland-0
+sudo chmod a+rwx $CHROOT_DIR/tmp/runtime-$USERNAME/wayland-0
+
+}
+
+start(){
+
+	echo -e "\nInitializing the audio server"
+		pulseaudio --start --exit-idle-time=-1
+		pacmd load-module module-native-protocol-tcp auth-ip-acl=127.0.0.1
+
+	echo -e "\nStarting the chroot"
+		
+		if findmnt $CHROOT_DIR >/dev/null
+		then
+		    sudo umount -l $CHROOT_DIR
+		fi
+		if [ "$INSMETHOD" == "file" ]
+		then
+			sudo mount -o loop $INSPATH $CHROOT_DIR
+		else
+			sudo mount --bind $INSPATH $CHROOT_DIR
+			sudo mount -o remount,bind,suid,exec $CHROOT_DIR
+		fi
+		for i in dev proc sys dev/pts dev/tty
+		do
+		    sudo busybox mount --bind /$i $CHROOT_DIR/$i
+		done
+
+	echo -e "\nBinding internal storage"
+        #This is not required if you are using proot-distro
+        sudo mkdir -p $CHROOT_DIR/media/internal_storage
+		sudo bindfs -o perms=a+rwx --multithreaded $INTERNAL_STORAGE $CHROOT_DIR/media/internal_storage
+
+		if [ -n "$(sudo ls -A /mnt/media_rw)" ]
+		then
+			echo -e "\nBinding external storage"
+			sudo mkdir -p $CHROOT_DIR/media/external_storage
+			sudo bindfs -o perms=a+rwx --multithreaded $EXTERNAL_STORAGE $CHROOT_DIR/media/external_storage
+		else
+			echo -e "\nSD card is not present, won't mount external storage"
+		fi
+	
+
+	if [ -d /proc/sys/fs/binfmt_misc ]
+	then
+		sudo busybox mount --bind /proc/sys/fs/binfmt_misc $CHROOT_DIR/proc/sys/fs/binfmt_misc
+		echo -e "\nLoading binfmts entries"
+		su -c busybox chroot $CHROOT_DIR /usr/bin/sudo -u root -i "update-binfmts --enable"
+	else 
+		echo "Binfmt support not detected, skipping loading of binfmt entries"
+	fi
+	
+	
+	if [ "$ARG2" = "-w" ]
+	then
+		xwayland #calls the xwayland function after starting the chroot
+		
+	fi
+	
+	echo -e "\nAll preparations completed, connecting now\n"
+	su -c busybox chroot $CHROOT_DIR /bin/login -f $USERNAME
+
+
+}
+
+stop(){
+
+pid=$(sudo pidof com.termux.x11)
+if [ "$pid" != "" ];
+then
+	sudo kill $pid
+fi
+sudo umount -l $CHROOT_DIR
+
+
+}
+
+help(){
+
+echo -e "\nA launcher for your chroot containers  with Termux. It launches your linux chroots with audio, internal, external storage and a X server to use with Termux:X11"
+echo -e "\nOptions:\n"
+echo -e "\nstart - Launches the chroot, run -w option to start the Xwayland server provided by Termux:X11."
+echo "stop -  Stops the chroot"
+echo "restart - Restart the chroot, you can use same options as the start command"
+echo -e "help -  Print this help page\n"
+
+}
+
+while [ True ];
+do
+	
+	if [ "$ARG1" = "stop" ]
+	then
+		stop
+		break
+	elif [ "$ARG1" = "start" ]
+        then    
+		if [ -d $CHROOT_DIR/home ]
+		then
+			echo "Chroot already mounted, connecting"
+			su -c busybox chroot $CHROOT_DIR /bin/login -f android
+		else 
+			start
+		fi
+		break
+	elif [ "$ARG1" = "restart" ]
+	then
+		stop
+		start
+		break
+	elif [ "$ARG1" = "help" ]
+	then
+		help
+		break
+    else 
+		echo -e "\nNo option specified\n"
+		help
+        break
+	fi	
+
+done
+
+
