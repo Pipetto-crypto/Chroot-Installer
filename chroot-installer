@@ -14,6 +14,7 @@ ARG2=$2
 ARG3=$3
 ARG4=$4
 CONFIG_FILE=$CONFIG_DIR/$ARG2.conf
+NOTDEBIAN=false
 
 make_image(){
 
@@ -56,19 +57,86 @@ make_folder(){
 	
 }
 
+first_setup(){
+
+  echo "USERNAME=$USRNAME" >> $CONFIG_FILE
+  sudo cp $PREFIX/etc/resolv.conf $CHROOT_DIR/etc
+  echo "localhost" | sudo tee -a $CHROOT_DIR/etc/hostname >/dev/null 2>&1
+  su -c busybox chroot $CHROOT_DIR "/usr/sbin/useradd --create-home $USRNAME"
+  su -c busybox chroot $CHROOT_DIR "/usr/bin/passwd $USRNAME"
+  su -c busybox chroot $CHROOT_DIR "/usr/sbin/groupadd -g 3001 aid_net_bt_admin"
+  su -c busybox chroot $CHROOT_DIR "/usr/sbin/groupadd -g 3002 aid_net_bt"
+  su -c busybox chroot $CHROOT_DIR "/usr/sbin/groupadd -g 3003 aid_inet"
+  su -c busybox chroot $CHROOT_DIR "/usr/sbin/groupadd -g 3004 aid_net_raw"
+  su -c busybox chroot $CHROOT_DIR "/usr/sbin/groupadd -g 3005 aid_net_admin"
+  su -c busybox chroot $CHROOT_DIR "/usr/sbin/usermod -aG sudo $USRNAME"
+  su -c busybox chroot $CHROOT_DIR "/usr/sbin/usermod -aG aid_inet,aid_net_raw,aid_net_admin,aid_net_bt,aid_net_bt_admin $USRNAME"
+  su -c busybox chroot $CHROOT_DIR "/usr/sbin/usermod -aG aid_inet,aid_net_raw,aid_net_admin,aid_net_bt,aid_net_bt_admin root"
+  su -c busybox chroot $CHROOT_DIR "/usr/sbin/usermod -g 3003 _apt"
+  echo -e "\nCopying installation scripts and required files to the chroot"
+
+  sudo mkdir -p $CHROOT_DIR/home/$USRNAME/scripts
+  sudo cp setup/*.sh $CHROOT_DIR/home/$USRNAME/scripts
+  sudo chmod -R a+rwx $CHROOT_DIR/home/$USRNAME/scripts
+  if [ "$(cat /etc/os-release | awk -F "=" '/ID_LIKE/{print $2}')" == "debian" ]
+  then
+  		echo -e "\nInstalling required dependencies"
+
+  		su -c busybox chroot $CHROOT_DIR /usr/bin/sudo -u root -i "apt update"
+  		su -c busybox chroot $CHROOT_DIR /usr/bin/sudo -u root -i "apt install wget gnupg2 xwayland -y"                     
+  else
+		NOTDEBIAN=true
+
+  fi
+
+  echo -e "\nAppending important env variables to profile and setting bash as the main shell"                         
+  su -c busybox chroot $CHROOT_DIR  /usr/bin/sudo -u $USRNAME -i "bash -c /home/$USRNAME/scripts/setup_env.sh"
+
+
+
+}
+
+install_de(){
+
+read -p "Select a DE among the available choices: [xfce,lxqt,icewm,fluxbox]" DE
+if [ "$DE" == "xfce" ]
+then
+	su -c busybox chroot $CHROOT_DIR /usr/bin/sudo -u root -i "apt install tigervnc-standalone-server tigervnc-common dbus-x11 tigervnc-xorg-extension xfce4 xfce4-goodies -y"
+	sed -i '8s|.*|echo "exec dbus-launch --exit-with-session xfce4-session" >> $HOME/.vnc/xstartup/' setup/install_vnc.sh
+elif [ "$DE" == "lxqt" ]
+then
+	su -c busybox chroot $CHROOT_DIR /usr/bin/sudo -u root -i "apt install tigervnc-standalone-server tigervnc-common dbus-x11 tigervnc-xorg-extension lxqt -y"
+	sed -i '8s|.*|echo "exec dbus-launch --exit-with-session startlxqt" >> $HOME/.vnc/xstartup/' setup/install_vnc.sh
+elif [ "$DE" == "icewm" ]
+then
+	su -c busybox chroot $CHROOT_DIR /usr/bin/sudo -u root -i "apt install tigervnc-standalone-server tigervnc-common dbus-x11 tigervnc-xorg-extension icewm -y"
+elif [ "$DE" == "fluxbox" ]
+then
+	su -c busybox chroot $CHROOT_DIR /usr/bin/sudo -u root -i "apt install tigervnc-standalone-server tigervnc-common dbus-x11 tigervnc-xorg-extension fluxbox -y"
+	sed -i '8s|.*|echo "exec dbus-launch --exit-with-session fluxbox" >> $HOME/.vnc/xstartup/' setup/install_vnc.sh
+fi	
+sudo cp setup/install_vnc.sh $CHROOT_DIR/home/$USRNAME/scripts
+su -c busybox chroot $CHROOT_DIR /usr/bin/sudo -u $USRNAME -i "bash -c /home/$USRNAME/scripts/install_vnc.sh"	
+	
+}
+
 install(){
 
 if [ "$ARG3" == "--custom" ]
 then
 	echo -e "\nUsing user selected rootfs"
 	ROOTFS=$ARG4
-else
-	echo -e "\nDownloading default debian rootfs"
+elif [ "$ARG3" == "debian" ]
+then
+	echo -e "\nDownloading debian rootfs"
 	if [ ! -f /sdcard/debian.tar.bz2 ]
 	then
 		megadl https://mega.nz/file/cV5ClJrb#h5UvcIdiLq2zFncGYBe3lBL3QjauJFmLupu2faKvFUY --path=/sdcard
 		ROOTFS=/sdcard/debian.tar.bz2
 	fi
+else
+	echo -e "No distro or rootfs specified, exiting"
+	exit
 fi
 
 
@@ -110,48 +178,20 @@ for i in dev proc sys dev/pts dev/tty
 do
 	sudo busybox mount --bind /$i $CHROOT_DIR/$i
 done
-		
-echo -e "\nInitial setup\n"
 
-read -p "Input an username: " USRNAME
-echo "USERNAME=$USRNAME" >> $CONFIG_FILE
-sudo cp $PREFIX/etc/resolv.conf $CHROOT_DIR/etc
-echo "localhost" | sudo tee -a $CHROOT_DIR/etc/hostname >/dev/null 2>&1
-su -c busybox chroot $CHROOT_DIR "/usr/sbin/useradd --create-home $USRNAME"
-su -c busybox chroot $CHROOT_DIR "/usr/bin/passwd $USRNAME"
-su -c busybox chroot $CHROOT_DIR "/usr/sbin/groupadd -g 3001 aid_net_bt_admin"
-su -c busybox chroot $CHROOT_DIR "/usr/sbin/groupadd -g 3002 aid_net_bt"
-su -c busybox chroot $CHROOT_DIR "/usr/sbin/groupadd -g 3003 aid_inet"
-su -c busybox chroot $CHROOT_DIR "/usr/sbin/groupadd -g 3004 aid_net_raw"
-su -c busybox chroot $CHROOT_DIR "/usr/sbin/groupadd -g 3005 aid_net_admin"
-su -c busybox chroot $CHROOT_DIR "/usr/sbin/usermod -aG sudo $USRNAME"
-su -c busybox chroot $CHROOT_DIR "/usr/sbin/usermod -aG aid_inet,aid_net_raw,aid_net_admin,aid_net_bt,aid_net_bt_admin $USRNAME"
-su -c busybox chroot $CHROOT_DIR "/usr/sbin/usermod -aG aid_inet,aid_net_raw,aid_net_admin,aid_net_bt,aid_net_bt_admin root"
-su -c busybox chroot $CHROOT_DIR "/usr/sbin/usermod -g 3003 _apt"
+first_setup
 
+if echo "$@" | grep "-d" && [ "$NOTDEBIAN" == "false" ]
+then
+	echo -e "\nInstalling a DE\n"
+	install_de
+fi
 
-echo -e "\nCopying installation scripts and required files to the chroot"
-
-sudo mkdir -p $CHROOT_DIR/home/$USRNAME/scripts
-sudo cp setup/*.sh $CHROOT_DIR/home/$USRNAME/scripts
-sudo chmod -R a+rwx $CHROOT_DIR/home/$USRNAME/scripts
-
-echo -e "\nInstalling required dependencies"
-
-su -c busybox chroot $CHROOT_DIR /usr/bin/sudo -u root -i "apt update"
-su -c busybox chroot $CHROOT_DIR /usr/bin/sudo -u root -i "apt install wget gnupg2 xwayland -y"
-
-echo -e "\nAppending important env variables to profile and setting bash as the main shell"
-
-su -c busybox chroot $CHROOT_DIR  /usr/bin/sudo -u $USRNAME -i "bash -c /home/$USRNAME/scripts/setup_env.sh"
-
-echo -e "\nInstalling vnc and icewm\n"
-
-su -c busybox chroot $CHROOT_DIR /usr/bin/sudo -u $USRNAME -i "bash -c /home/$USRNAME/scripts/install_vnc.sh"
-
-echo -e "\nInstalling box64 and box86\n"
-
-su -c busybox chroot $CHROOT_DIR /usr/bin/sudo -u $USRNAME -i "bash -c /home/$USRNAME/scripts/install_box.sh"
+  if echo "$@" | grep "-b" && [ "$NOTDEBIAN" == "false" ]
+  then
+      echo -e "\nInstalling wine,box86,box64\n"
+      su -c busybox chroot $CHROOT_DIR /usr/bin/sudo -u $USRNAME -i "bash -c /home/$USRNAME/scripts/install_box.sh"
+  fi
 
 if [ -d /proc/sys/fs/binfmt_misc ]
 then
@@ -188,6 +228,14 @@ sudo rm -rf $CONFIG_FILE
 	
 }
 
+list (){
+
+echo -e "\nAvailable distros:"
+echo -e "Debian 11 Bullseye"
+echo -e "Ubuntu 22.04 JammyFish"
+
+}
+
 update(){
 
 #git clone 
@@ -198,17 +246,21 @@ mv chroot-installer $PATH
 
 help(){
 
-echo -e "chroot-installer: chroot-installer [install,remove,update,help] containername [--custom] path."
-echo -e "\nScript thath help to install and remove chroot containers for rooted device with busybox installed. For debian-based distros, it will additional install a fully working desktop environment,alongside box86 and box64 to run x86 apps\n"
+echo -e "chroot-installer: chroot-installer [install|remove|update|list|help] containername distro|[--custom] path [-b,-d]"
+echo -e "\nScript thath help to install and remove chroot containers for rooted device with busybox installed.\n"
 echo -e "\nOptions:"
-echo -e "install      install the container specified by argumemt containername, if the --custom option is not specified it will use a custom made debian rootfs"
-echo -e "remove       remove the container specified by argument containername alongside all of its files"
-echo -e "update       update this script"
-echo -e "help         print this help message\n"
-echo -e "--custom     can be specified alongside install for inputting custom rootfses through the argument path, only debian-based rootfses are guaranteed to work"
+echo -e "install      install the container with name containername and using distro specified by distro argument"
+echo -e "remove       remove the container specified by argument containername alongside all of its files.Takes only argument containername with no other options"
+echo -e "list         list available distros"
+echo -e "update       update this script,takes no argument"
+echo -e "help         print this help message,takes no argument\n"
+echo -e "--custom     can be specified alongside install and in place of argument distro for inputting custom rootfses through the argument path, only debian-based rootfses are guaranteed to work"
+echo -e "-d           install a desktop environment of your choice alongside VNC, disabled by default and only available for debian-based distros"
+echo -e "-b           install box86 and box64 alongside wine to run x86 apps,disabled by default and only available for debian-based distros"
 echo -e "\nArguments:"
 echo -e "containersname  name of the container you want to install"
-echo -e "path full path of the custom rootfs"
+echo -e "path            full path of the custom rootfs, to use only with --custom option"
+echo -e "distro          specify a distro to install, takes the place of --custom option. To check available distros use the list option"
 	
 }
 
@@ -241,6 +293,10 @@ do
 	elif [ "$ARG1" == "update" ]
 	then
 		update
+		break
+	elif [ "$ARG1" == "list" ]
+	then
+		list
 		break
 	elif [ "$ARG1" == "help" ]
 	then

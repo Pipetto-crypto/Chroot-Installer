@@ -1,6 +1,5 @@
 #!/bin/bash
 
-sudo apt install tigervnc-standalone-server tigervnc-common dbus-x11 tigervnc-xorg-extension icewm -y
 mkdir -p $HOME/.vnc
 touch $HOME/.vnc/xstartup
 sudo chmod +x $HOME/.vnc/xstartup
