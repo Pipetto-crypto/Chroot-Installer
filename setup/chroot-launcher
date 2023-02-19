@@ -8,10 +8,6 @@ ANDROIDVERSION=$(getprop ro.build.version.release)
 ARG1=$1
 ARG2=$2
 
-if [ -f $INSPATH ]
-then
-	INSMETHOD="file"
-fi
 
 
 if [[ "$(su -c busybox)" =~ "not found" ]]
@@ -118,6 +114,10 @@ else
 fi
 
 
+if [ -f $INSPATH ]
+then
+    INSMETHOD="file"
+fi
 
 
 	echo -e "\nInitializing the audio server"
