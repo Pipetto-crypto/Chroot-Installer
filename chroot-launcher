@@ -1,10 +1,12 @@
 #!/bin/bash
 
-USERNAME=username
+CONFIG_DIR=~/.chroot_installer
+LAST_ARGUMENT=$(echo "$@" | awk '{ print $NF }')
 CHROOT_DIR=/data/local/mnt
 INTERNAL_STORAGE=/sdcard
-INSPATH=$(echo $@ | awk '{ print $NF }')
-A_VERSION=$(getprop ro.build.version.release)
+ANDROIDVERSION=$(getprop ro.build.version.release)
+ARG1=$1
+ARG2=$2
 
 if [ -f $INSPATH ]
 then
@@ -18,7 +20,7 @@ if [[ "$(su -c busybox)" =~ "not found" ]]
       exit 0
   fi
 
-if (( $(echo "$A_VERSION = 12"|bc -l) ))
+if [ "$ANDROIDVERSION" == "12" ]
 then
 	if ! su -c device_config get activity_manager max_phantom_processes | grep -q "2147483647"
 	then
@@ -31,9 +33,6 @@ if [ -n "$(sudo ls -A /mnt/media_rw)" ]
 then
 	EXTERNAL_STORAGE=/mnt/media_rw/$(sudo ls /mnt/media_rw)
 fi
-
-ARG1=$1
-ARG2=$2
 
 
 #This function contains the commands required to start the Xwayland socket in the chroot.
@@ -52,7 +51,74 @@ sudo chmod a+rwx $CHROOT_DIR/tmp/runtime-$USERNAME/wayland-0
 
 }
 
+update(){
+
+git clone https://raw.githubusercontent.com/Pipetto-crypto/Chroot-Installer/master/chroot-launcher?token=GHSAT0AAAAAABZCGT55FGO2FJPUZ3DSSD5OY7REUIA
+chmod +x chroot_launcher
+mv chroot_launcher $PATH
+	
+}
+
+list-containers(){
+
+for i in $CONFIG_DIR/*
+do
+	CONTAINER=$(basename -- $i)
+	echo "${CONTAINER%.*}"
+done
+	
+}
+
+mark-default(){
+
+for i in $CONFIG_DIR/* #check each file for default flag and remove it
+do
+	if [ "$(tail -n 1 $i)" == "default" ]
+	then
+		sed -i '$ d' $i
+	fi
+done	
+
+echo "default" >> $CONFIG_DIR/$LAST_ARGUMENT.conf
+	
+}
+
 start(){
+
+
+if [ -f $LAST_ARGUMENT  ] || [ -d $LAST_ARGUMENT ]
+then
+	INSPATH=$LAST_ARGUMENT
+	read -p "What's the username associated with this container: " USERNAME
+
+elif [ "$LAST_ARGUMENT" == "-w" ] || [ "$LAST_ARGUMENT" == "start" ] || [ "$LAST_ARGUMENT" == "restart" ] 
+then
+	if (( $(ls -1 $CONFIG_DIR | wc -l ) == 1 ))
+	then
+		CONFIG="$CONFIG_DIR/*"
+		USERNAME=$(cat $CONFIG | awk -F '='  '/USERNAME/{print $2}')
+		INSPATH=$(cat $CONFIG | awk -F '=' '/INSPATH/{print $2}')
+		
+	else
+		for i in $CONFIG_DIR/*
+		do
+			if [ $(tail -n 1 $i) == "default" ]
+			then
+				CONFIG=$i
+				USERNAME=$(cat $CONFIG | awk -F '='  '/USERNAME/{print $2}')
+				INSPATH=$(cat $CONFIG | awk -F '=' '/INSPATH/{print $2}')
+			fi
+		done
+	fi		
+		
+else
+	CONFIG="$CONFIG_DIR/$LAST_ARGUMENT.conf"
+	USERNAME=$(cat $CONFIG | awk -F '='  '/USERNAME/{print $2}')
+	INSPATH=$(cat $CONFIG | awk -F '=' '/INSPATH/{print $2}')
+fi
+
+
+
 
 	echo -e "\nInitializing the audio server"
 		pulseaudio --start --exit-idle-time=-1
@@ -129,9 +195,12 @@ help(){
 
 echo -e "\nA launcher for your chroot containers  with Termux. It launches your linux chroots with audio, internal, external storage and a X server to use with Termux:X11"
 echo -e "\nOptions:\n"
-echo -e "\nstart - Launches the chroot, run -w option to start the Xwayland server provided by Termux:X11."
+echo -e "\nstart - Launches the selected container, run -w option to start the Xwayland server provided by Termux:X11."
 echo "stop -  Stops the chroot"
 echo "restart - Restart the chroot, you can use same options as the start command"
+echo "update - Update the launcher"
+echo "list-containers - List available containers"
+echo "mark-default - Mark selected container as default"
 echo -e "help -  Print this help page\n"
 
 }
@@ -157,6 +226,18 @@ do
 	then
 		stop
 		start
+		break
+	elif [ "$ARG1" == "update" ]
+	then
+		update
+		break
+	elif [ "$ARG1" == "list-containers" ]
+	then
+		list-containers
+		break
+	elif [ "$ARG1" == "mark-default" ]
+	then
+		mark-default
 		break
 	elif [ "$ARG1" = "help" ]
 	then

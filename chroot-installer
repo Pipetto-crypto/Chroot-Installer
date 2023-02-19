@@ -8,10 +8,12 @@ clear
 CHROOT_DIR=/data/local/mnt
 CONFIG_DIR=~/.chroot_installer
 ANDROIDVERSION=$(getprop ro.build.version.release | cut -f1,2 -d '.')
+ROOTFS_DIR=~/installed-rootfs
 ARG1=$1
 ARG2=$2
 ARG3=$3
-CONFIG_FILE=$CONFIG_DIR/$ARG1.conf
+ARG4=$4
+CONFIG_FILE=$CONFIG_DIR/$ARG2.conf
 
 make_image(){
 
@@ -45,7 +47,7 @@ make_image(){
 
 make_folder(){
 
-  INSPATH=~/rootfs
+  INSPATH=$ROOTFS_DIR/$ARG2
   mkdir -p $INSPATH
   sudo chmod 755 $INSPATH
   sudo chown 0:0 $INSPATH
@@ -54,27 +56,12 @@ make_folder(){
 	
 }
 
-if [[ "$(su -c busybox)" =~ "not found" ]]
-then
-    echo "Busybox not available,please install busybox before using this installer"
-    exit 0
-fi
+install(){
 
-if (( $(echo "$ANDROIDVERSION>12" | bc -l) ))
-then
-    if [ "$(su -c settings get global settings_enable_monitor_phantom_procs)" == "true" ]
-    then
-        echo -e "Android 12.1 or greater detected, disabling phantom processes killer"
-        su -c settings put global settings_enable_monitor_phantom_procs false
-    fi
-fi
-
-
-
-if [ "$ARG2" == "--custom" ]
+if [ "$ARG3" == "--custom" ]
 then
 	echo -e "\nUsing user selected rootfs"
-	ROOTFS=$ARG3
+	ROOTFS=$ARG4
 else
 	echo -e "\nDownloading default debian rootfs"
 	if [ ! -f /sdcard/debian.tar.bz2 ]
@@ -83,6 +70,7 @@ else
 		ROOTFS=/sdcard/debian.tar.bz2
 	fi
 fi
+
 
 echo -e "\nInitialization installation of the rootfs\n"
 
@@ -179,9 +167,87 @@ echo -e "\nFirst setup completed, stopping the chroot"
 
 sudo umount -l $CHROOT_DIR
 
-echo -e "\nCopying the chroot-launcher script"
+echo -e "\nCopying the chroot-launcher and chroot-installer scripts to $PATH"
 
-cp chroot-launcher $PATH
-chmod +x $PATH/chroot-launcher
+mv chroot-launcher $PATH
+cp chroot-installer $PATH
+chmod +x $PATH/chroot-launcher $PATH/chroot-installer
+
+}
+
+remove(){
+
+INSPATH=$(cat $CONFIG_FILE | awk -F '=' '/INSPATH/{print $2}')
+echo -e "Unmounting any running container"
+sudo umount -l $CHROOT_DIR
+sudo umount -l $CHROOT_DIR/media/*
+echo -e "Deleting the selected container"
+sudo rm -rf $INSPATH
+sudo rm -rf $CONFIG_FILE
+
+	
+}
+
+update(){
+
+#git clone 
+chmod +x chroot-installer
+mv chroot-installer $PATH
+	
+}
+
+help(){
+
+echo -e "chroot-installer: chroot-installer [install,remove,update,help] containername [--custom] path."
+echo -e "\nScript thath help to install and remove chroot containers for rooted device with busybox installed. For debian-based distros, it will additional install a fully working desktop environment,alongside box86 and box64 to run x86 apps\n"
+echo -e "\nOptions:"
+echo -e "install      install the container specified by argumemt containername, if the --custom option is not specified it will use a custom made debian rootfs"
+echo -e "remove       remove the container specified by argument containername alongside all of its files"
+echo -e "update       update this script"
+echo -e "help         print this help message\n"
+echo -e "--custom     can be specified alongside install for inputting custom rootfses through the argument path, only debian-based rootfses are guaranteed to work"
+echo -e "\nArguments:"
+echo -e "containersname  name of the container you want to install"
+echo -e "path full path of the custom rootfs"
+	
+}
 
 
+if [[ "$(su -c busybox)" =~ "not found" ]]
+then
+    echo "Busybox not available,please install busybox before using this installer"
+    exit 0
+fi
+
+if (( $(echo "$ANDROIDVERSION>12" | bc -l) ))
+then
+    if [ "$(su -c settings get global settings_enable_monitor_phantom_procs)" == "true" ]
+    then
+        echo -e "Android 12.1 or greater detected, disabling phantom processes killer"
+        su -c settings put global settings_enable_monitor_phantom_procs false
+    fi
+fi
+
+while [ True ]
+do
+	if [ "$ARG1" == "install" ]
+	then
+		install
+		break
+	elif [ "$ARG1" == "remove" ]
+	then
+		remove
+		break
+	elif [ "$ARG1" == "update" ]
+	then
+		update
+		break
+	elif [ "$ARG1" == "help" ]
+	then
+		help
+		break
+	else
+		help
+		break
+	fi
+done
