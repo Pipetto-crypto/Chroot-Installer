@@ -5,13 +5,13 @@ touch $HOME/.vnc/xstartup
 sudo chmod +x $HOME/.vnc/xstartup
 echo "unset SESSION_MANAGER" > $HOME/.vnc/xstartup
 echo "unset DBUS_SESSION_BUS_ADDRESS" >> $HOME/.vnc/xstartup
-if ls /usr/bin | grep startlxqt
+if ls /usr/bin | grep -q startlxqt
 then
 	echo "exec dbus-launch --exit-with-session startlxqt" >> $HOME/.vnc/xstartup
-elif ls /usr/bin | grep xfce4-session
+elif ls /usr/bin | grep -q xfce4-session
 then
 	echo "exec dbus-launch --exit-with-session xfce4-session" >> $HOME/.vnc/xstartup
-elif ls /usr/bin | grep fluxbox
+elif ls /usr/bin | grep -q fluxbox
 then
 	echo "exec dbus-launch --exit-with-session fluxbox" >> $HOME/.vnc/xstartup
 else
