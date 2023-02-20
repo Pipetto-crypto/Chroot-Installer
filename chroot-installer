@@ -3,7 +3,6 @@
 echo -e "WARNING: THIS SCRIPT IS UNTESTED ON ANDROID VERSIONS NEWER THAN 10, SO IT MAY NOT WORK. ISSUES ABOUT NOT WORKING ON NEWER ANDROID VERSIONS WILL ONLY BE ACCEPTED WHEN PROPER LOGS ARE PROVIDED"
 echo -e "\nWARNING: TERMUX:X11 APP MAY NOT WORK IN A CHROOT DEPENDING ON YOUR ANDROID VERSION. NO ISSUES WILL BE ACCEPTED ABOUT TERMUX:X11 AS THEY AREN'T RELATED TO THIS SCRIPT"
 #sleep 10
-clear
 
 CHROOT_DIR=/data/local/mnt
 CONFIG_DIR=~/.chroot_installer
@@ -16,9 +15,22 @@ ARG4=$4
 CONFIG_FILE=$CONFIG_DIR/$ARG2.conf
 NOTDEBIAN=false
 
+if [ -f $CONFIG_FILE ]
+then
+	USERNAME=$(cat $CONFIG_FILE | awk -F '='  '/USERNAME/{print $2}')
+	INSPATH=$(cat $CONFIG_FILE | awk -F '=' '/INSPATH/{print $2}')
+	if [ "$USERNAME" == "" ] || [ "$INSPATH" == "" ]
+	then
+		echo -e "This container seems to exist but it looks empty, so I will recreate it"
+	else
+		echo -e "This container already exists, please select a different container name,exiting"
+		exit
+	fi
+fi
+
 make_image(){
 
-   echo -e "\nCreating the rootfs image, requires at least 8GB of storage\n"
+    echo -e "\nCreating the rootfs image, requires at least 8GB of storage\n"
     read -p "Select an image name: " IMGNAME
     read -p "Select an installation path: " SPATH
     read -p "Select image size in megabytes: " SIZE
@@ -244,13 +256,19 @@ chmod +x $PATH/chroot-launcher $PATH/chroot-installer
 
 remove(){
 
-INSPATH=$(cat $CONFIG_FILE | awk -F '=' '/INSPATH/{print $2}')
-echo -e "Unmounting any running container"
-sudo umount -l $CHROOT_DIR
-sudo umount -l $CHROOT_DIR/media/*
-echo -e "Deleting the selected container"
-sudo rm -rf $INSPATH
-sudo rm -rf $CONFIG_FILE
+if [ -f $CONFIG_FILE ]
+then
+	INSPATH=$(cat $CONFIG_FILE | awk -F '=' '/INSPATH/{print $2}')
+	echo -e "Unmounting any running container"
+	sudo umount -l $CHROOT_DIR
+	sudo umount -l $CHROOT_DIR/media/*
+	echo -e "Deleting the selected container"
+	sudo rm -rf $INSPATH
+	sudo rm -rf $CONFIG_FILE
+else
+	echo -e "This container doesn't exist, provide an existing container"
+	exit
+fi
 
 	
 }
