@@ -235,15 +235,19 @@ sudo umount -l $CHROOT_DIR
 
 help(){
 
-echo -e "\nA launcher for your chroot containers  with Termux. It launches your linux chroots with audio, internal, external storage and a X server to use with Termux:X11"
+echo -e "chroot-launcher: chroot-launcher [start|stop|restart|list-containers|mark-default] [-w] containername|filepath"
+echo -e "\nA launcher intended mainly for chroot-containers made with the utility chroot-installer, even though it can chroot into every rootfs as long as a full path to it is provided. The chroot is launched with audio, internal, and if available external storage by default"
 echo -e "\nOptions:\n"
-echo -e "\nstart - Launches the selected container, run -w option to start the Xwayland server provided by Termux:X11."
-echo "stop -  Stops the chroot"
-echo "restart - Restart the chroot, you can use same options as the start command"
-echo "update - Update the launcher"
-echo "list-containers - List available containers"
-echo "mark-default - Mark selected container as default"
-echo -e "help -  Print this help page\n"
+echo -e "\nstart     Launches the container specified by argument containername or chroot into the rootfs specified by argument filepath. If no container or filepath is provided it launches the one marked as default"
+echo -e "stop        Stops the container, takes no argument"
+echo -e "restart     Restart the container specified by argument containername, works like start."
+echo -e "update      Update this launcher script, takes no argument"
+echo -e "list-containers      List available containers, takes no argument"
+echo -e "mark-default       Mark container specficied by argument containername as default"
+echo -e "help        Print this help page,takes no argument\n"
+echo -e "\nArguments:\n"
+echo -e "\ncontainername     name of the container to be launched"
+echo -e "\nfilepath      Path to the rootfs that the script should try to launch. Used in place of containername"
 
 }
 
