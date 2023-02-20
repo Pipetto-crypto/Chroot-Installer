@@ -151,8 +151,12 @@ then
     then
         echo -e "This container seems to exist but it looks empty, so I will recreate it"
     else
-        echo -e "This container already exists, for now continuing"
-        #exit
+        read -p "This container already exists, do you want me to recreate it [y|n]: " CHOICE
+        if [ "$CHOICE" == "n" ]
+        then
+        	echo -e "\nI will leave then"
+        	exit
+        fi
     fi
 fi
 
@@ -230,18 +234,18 @@ done
   	then
         echo -e "\nInstalling wine,box86,box64\n"
         su -c busybox chroot $CHROOT_DIR /usr/bin/sudo -u $USRNAME -i "bash -c /home/$USRNAME/scripts/install_box.sh"
-	 fi
-done
+		  if [ -d /proc/sys/fs/binfmt_misc ]
+		  then
+          		sudo busybox mount --bind /proc/sys/fs/binfmt_misc $CHROOT_DIR/proc/sys/fs/bin
+          		echo -e "\nInstalling binfmt entries"
+          		su -c busybox chroot $CHROOT_DIR /usr/bin/sudo -u root -i "apt install binfmt-support -y"
+          		sudo cp binfmt-confs/box86 binfmt-confs/box64  $CHROOT_DIR/usr/share/binfmts
+          		su -c busybox chroot $CHROOT_DIR /usr/bin/sudo -u root -i "update-binfmts --import"
+          fi
 
-if [ -d /proc/sys/fs/binfmt_misc ]
-then
-		sudo busybox mount --bind /proc/sys/fs/binfmt_misc $CHROOT_DIR/proc/sys/fs/binfmt_misc
-		echo -e "\nInstalling binfmt entries"
-		su -c busybox chroot $CHROOT_DIR /usr/bin/sudo -u root -i "apt install binfmt-support -y"
-		sudo cp binfmt-confs/box86 binfmt-confs/box64  $CHROOT_DIR/usr/share/binfmts
-		su -c busybox chroot $CHROOT_DIR /usr/bin/sudo -u root -i "update-binfmts --import"
-		
-fi
+	 fi
+  done
+
 
 echo -e "\nFirst setup completed, stopping the chroot"
 
@@ -276,7 +280,7 @@ fi
 
 list (){
 
-echo -e "\nAvailable distros:"
+echo -e "\nAvailable distros:\n"
 echo -e "Debian 11 Bullseye"
 echo -e "Ubuntu 22.04 JammyFish"
 
@@ -294,7 +298,7 @@ help(){
 
 echo -e "chroot-installer: chroot-installer [install|remove|update|list|help] containername distro|[--custom] path [-b,-d]"
 echo -e "\nScript thath help to install and remove chroot containers for rooted device with busybox installed.\n"
-echo -e "\nOptions:"
+echo -e "\nOptions:\n"
 echo -e "install      install the container with name containername and using distro specified by distro argument"
 echo -e "remove       remove the container specified by argument containername alongside all of its files.Takes only argument containername with no other options"
 echo -e "list         list available distros"
