@@ -8,25 +8,15 @@ CHROOT_DIR=/data/local/mnt
 CONFIG_DIR=~/.chroot_installer
 ANDROIDVERSION=$(getprop ro.build.version.release | cut -f1,2 -d '.')
 ROOTFS_DIR=~/installed-rootfs
-ARG1=$1
-ARG2=$2
-ARG3=$3
-ARG4=$4
-CONFIG_FILE=$CONFIG_DIR/$ARG2.conf
+index=1
+for var in "$@"
+do
+	argslist[$index]=$var
+	index=$((index+1))
+done
+CONFIG_FILE=$CONFIG_DIR/${argslist[2]}.conf
 NOTDEBIAN=false
 
-if [ -f $CONFIG_FILE ]
-then
-	USERNAME=$(cat $CONFIG_FILE | awk -F '='  '/USERNAME/{print $2}')
-	INSPATH=$(cat $CONFIG_FILE | awk -F '=' '/INSPATH/{print $2}')
-	if [ "$USERNAME" == "" ] || [ "$INSPATH" == "" ]
-	then
-		echo -e "This container seems to exist but it looks empty, so I will recreate it"
-	else
-		echo -e "This container already exists, please select a different container name,exiting"
-		exit
-	fi
-fi
 
 make_image(){
 
@@ -60,7 +50,7 @@ make_image(){
 
 make_folder(){
 
-  INSPATH=$ROOTFS_DIR/$ARG2
+  INSPATH=$ROOTFS_DIR/${argslist[2]}
   mkdir -p $INSPATH
   sudo chmod 755 $INSPATH
   sudo chown 0:0 $INSPATH
@@ -135,31 +125,42 @@ read -p "Select a DE among the available choices: [xfce,lxqt,icewm,fluxbox]" DE
 if [ "$DE" == "xfce" ]
 then
 	su -c busybox chroot $CHROOT_DIR /usr/bin/sudo -u root -i "apt install tigervnc-standalone-server tigervnc-common dbus-x11 tigervnc-xorg-extension xfce4 xfce4-goodies -y"
-	sed -i '8s|.*|echo "exec dbus-launch --exit-with-session xfce4-session" >> $HOME/.vnc/xstartup/' setup/install_vnc.sh
 elif [ "$DE" == "lxqt" ]
 then
 	su -c busybox chroot $CHROOT_DIR /usr/bin/sudo -u root -i "apt install tigervnc-standalone-server tigervnc-common dbus-x11 tigervnc-xorg-extension lxqt -y"
-	sed -i '8s|.*|echo "exec dbus-launch --exit-with-session startlxqt" >> $HOME/.vnc/xstartup/' setup/install_vnc.sh
 elif [ "$DE" == "icewm" ]
 then
 	su -c busybox chroot $CHROOT_DIR /usr/bin/sudo -u root -i "apt install tigervnc-standalone-server tigervnc-common dbus-x11 tigervnc-xorg-extension icewm -y"
 elif [ "$DE" == "fluxbox" ]
 then
 	su -c busybox chroot $CHROOT_DIR /usr/bin/sudo -u root -i "apt install tigervnc-standalone-server tigervnc-common dbus-x11 tigervnc-xorg-extension fluxbox -y"
-	sed -i '8s|.*|echo "exec dbus-launch --exit-with-session fluxbox" >> $HOME/.vnc/xstartup/' setup/install_vnc.sh
-fi	
-sudo cp setup/install_vnc.sh $CHROOT_DIR/home/$USRNAME/scripts
+fi
+
+	
 su -c busybox chroot $CHROOT_DIR /usr/bin/sudo -u $USRNAME -i "bash -c /home/$USRNAME/scripts/install_vnc.sh"	
 	
 }
 
 install(){
 
-if [ "$ARG3" == "--custom" ]
+if [ -f $CONFIG_FILE ]
+then
+    USERNAME=$(cat $CONFIG_FILE | awk -F '='  '/USERNAME/{print $2}')
+    INSPATH=$(cat $CONFIG_FILE | awk -F '=' '/INSPATH/{print $2}')
+    if [ "$USERNAME" == "" ] || [ "$INSPATH" == "" ]
+    then
+        echo -e "This container seems to exist but it looks empty, so I will recreate it"
+    else
+        echo -e "This container already exists, for now continuing"
+        #exit
+    fi
+fi
+
+if [ "${argslist[3]}" == "--custom" ]
 then
 	echo -e "\nUsing user selected rootfs"
-	ROOTFS=$ARG4
-elif [ "$ARG3" == "debian" ]
+	ROOTFS=${argslist[4]}
+elif [ "${argslist[3]}" == "debian" ]
 then
 	echo -e "\nDownloading debian rootfs"
 	if [ ! -f /sdcard/debian.tar.bz2 ]
@@ -185,8 +186,8 @@ read -p "Select an installation method: " INSMETHOD
 
 if [ "$INSMETHOD" == "file" ]
 then
-
-	make_image
+	echo "placehol"
+	#make_image
 
 else
 	
@@ -214,23 +215,23 @@ done
 
 first_setup
 
-if [[ $(echo "$@") =~ "-d" ]]
-then
-	if [ "$NOTDEBIAN" == "false" ]
-	then
-		echo -e "\nInstalling a DE\n"
+for i in ${argslist[@]}
+do
+  if [ "$i" == "-d" ]  && [ "$NOTDEBIAN" == "false" ]
+  then
+  		echo -e "\nInstalling a DE\n"
 		install_de
 	fi
-fi
+done
 
-  if [[ $(echo "$@") =~ "-b" ]]
-  then
-      if [ "$NOTDEBIAN" == "false" ]
-      then 
-      	  echo -e "\nInstalling wine,box86,box64\n"
-          su -c busybox chroot $CHROOT_DIR /usr/bin/sudo -u $USRNAME -i "bash -c /home/$USRNAME/scripts/install_box.sh"
-	  fi
-  fi
+ for i in ${argslist[@]}
+ do
+	if [ "$i" == "-b" ]  &&	[ "$NOTDEBIAN" == "false" ]
+  	then
+        echo -e "\nInstalling wine,box86,box64\n"
+        su -c busybox chroot $CHROOT_DIR /usr/bin/sudo -u $USRNAME -i "bash -c /home/$USRNAME/scripts/install_box.sh"
+	 fi
+done
 
 if [ -d /proc/sys/fs/binfmt_misc ]
 then
@@ -327,23 +328,23 @@ fi
 
 while [ True ]
 do
-	if [ "$ARG1" == "install" ]
+	if [ "${argslist[1]}" == "install" ]
 	then
 		install
 		break
-	elif [ "$ARG1" == "remove" ]
+	elif [ "${argslist[1]}" == "remove" ]
 	then
 		remove
 		break
-	elif [ "$ARG1" == "update" ]
+	elif [ "${argslist[1]}" == "update" ]
 	then
 		update
 		break
-	elif [ "$ARG1" == "list" ]
+	elif [ "${argslist[1]}" == "list" ]
 	then
 		list
 		break
-	elif [ "$ARG1" == "help" ]
+	elif [ "${argslist[1]}" == "help" ]
 	then
 		help
 		break
