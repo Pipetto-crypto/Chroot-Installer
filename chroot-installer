@@ -54,7 +54,14 @@ make_folder(){
   mkdir -p $INSPATH
   sudo chmod 755 $INSPATH
   sudo chown 0:0 $INSPATH
-  sudo tar --skip-old-files -xjf $ROOTFS -C $INSPATH
+  FILENAME="$(basename $ROOTFS)"
+  case "$FILENAME" in
+  *.tar.bz2)
+  	sudo tar --skip-old-files -xjf $ROOTFS -C $INSPATH
+  	;;
+  *.tar.gz)
+  	sudo tar --skip-old-files -xzf $ROOTFS -C $INSPATH
+  esac
   echo "INSPATH=$INSPATH" > $CONFIG_FILE
 	
 }
@@ -83,9 +90,14 @@ first_setup(){
   echo "USERNAME=$USRNAME" >> $CONFIG_FILE
   mark_default
   sudo cp $PREFIX/etc/resolv.conf $CHROOT_DIR/etc
-  echo "localhost" | sudo tee -a $CHROOT_DIR/etc/hostname >/dev/null 2>&1
+  sudo cp setup/hosts $CHROOT_DIR/etc
+  sudo chown 0:0 $CHROOT_DIR/etc/hosts
+  sudo chmod 644 $CHROOT_DIR/etc/hosts
+  su -c busybox chroot /data/local/mnt "/usr/bin/echo 'localhost' > $CHROOT_DIR/etc/hostname"
   su -c busybox chroot $CHROOT_DIR "/usr/sbin/useradd --create-home $USRNAME"
   su -c busybox chroot $CHROOT_DIR "/usr/bin/passwd $USRNAME"
+  echo -e "\nUser password created, please insert one for the root account: "
+  su -c busybox chroot $CHROOT_DIR "/usr/bin/passwd root"
   su -c busybox chroot $CHROOT_DIR "/usr/sbin/groupadd -g 3001 aid_net_bt_admin"
   su -c busybox chroot $CHROOT_DIR "/usr/sbin/groupadd -g 3002 aid_net_bt"
   su -c busybox chroot $CHROOT_DIR "/usr/sbin/groupadd -g 3003 aid_inet"
@@ -104,9 +116,8 @@ first_setup(){
   if [ "$ID_LIKEOS" == "debian" ] || [ "$ID_LIKEOS" == "" ]
   then
   		echo -e "\nInstalling required dependencies"
-
-  		su -c busybox chroot $CHROOT_DIR /usr/bin/sudo -u root -i "apt update"
-  		su -c busybox chroot $CHROOT_DIR /usr/bin/sudo -u root -i "apt install wget gnupg2 xwayland -y"                     
+		su -c busybox chroot $CHROOT_DIR '/bin/su - root -c "apt update"'
+		su -c busybox chroot $CHROOT_DIR '/bin/su - root -c "apt install sudo wget gnupg2 xwayland -y"'             
   else
 		NOTDEBIAN=true
 
@@ -121,7 +132,7 @@ first_setup(){
 
 install_de(){
 
-read -p "Select a DE among the available choices: [xfce,lxqt,icewm,fluxbox]" DE
+read -p "Select a DE among the available choices[xfce|lxqt|icewm|fluxbox]: " DE
 if [ "$DE" == "xfce" ]
 then
 	su -c busybox chroot $CHROOT_DIR /usr/bin/sudo -u root -i "apt install tigervnc-standalone-server tigervnc-common dbus-x11 tigervnc-xorg-extension xfce4 xfce4-goodies -y"
@@ -172,8 +183,15 @@ then
 		megadl https://mega.nz/file/cV5ClJrb#h5UvcIdiLq2zFncGYBe3lBL3QjauJFmLupu2faKvFUY --path=/sdcard
 	fi
 	ROOTFS=/sdcard/debian.tar.bz2
+elif [ "${argslist[3]}" == "ubuntu" ]
+then
+	if [ ! -f /sdcard/ubuntu-base-22.04.1-base-arm64.tar.gz ]
+	then
+		wget http://cdimage.ubuntu.com/ubuntu-base/releases/jammy/release/ubuntu-base-22.04.1-base-arm64.tar.gz -P /sdcard
+	fi
+	ROOTFS=/sdcard/ubuntu-base-22.04.1-base-arm64.tar.gz
 else
-	echo -e "No distro or rootfs specified, exiting"
+	echo -e "No valid distro or rootfs specified, exiting"
 	exit
 fi
 
@@ -190,8 +208,7 @@ read -p "Select an installation method: " INSMETHOD
 
 if [ "$INSMETHOD" == "file" ]
 then
-	echo "placehol"
-	#make_image
+	make_image
 
 else
 	
