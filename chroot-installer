@@ -98,6 +98,18 @@ first_setup(){
   mark_default
   sudo cp $PREFIX/etc/resolv.conf $CHROOT_DIR/etc
   sudo cp setup/hosts $CHROOT_DIR/etc
+  if [ "${argslist[3]}" == "manjaro" ]
+  then
+      sudo cp setup/pacman.conf $CHROOT_DIR/etc
+      su -c busybox chroot $CHROOT_DIR '/bin/su - root -c "pacman-key --init"'
+      su -c busybox chroot $CHROOT_DIR '/bin/su - root -c "pacman-key --populate archlinux-arm manjaro-arm manjaro"'
+      su -c busybox chroot $CHROOT_DIR '/bin/su - root -c "pacman-mirrors -f10"'
+      su -c busybox chroot $CHROOT_DIR '/bin/su - root -c "pacman -Syyu base manjaro-system manjaro-release --noconfirm"'
+      su -c busybox chroot $CHROOT_DIR "/usr/sbin/groupadd wheel"
+      su -c busybox chroot $CHROOT_DIR "/usr/sbin/usermod -aG wheel $USRNAME"
+      
+  fi    
+  	
   sudo chown 0:0 $CHROOT_DIR/etc/hosts
   sudo chmod 644 $CHROOT_DIR/etc/hosts
   su -c busybox chroot /data/local/mnt "/usr/bin/echo 'localhost' > $CHROOT_DIR/etc/hostname"
@@ -110,21 +122,21 @@ first_setup(){
   su -c busybox chroot $CHROOT_DIR "/usr/sbin/groupadd -g 3003 aid_inet"
   su -c busybox chroot $CHROOT_DIR "/usr/sbin/groupadd -g 3004 aid_net_raw"
   su -c busybox chroot $CHROOT_DIR "/usr/sbin/groupadd -g 3005 aid_net_admin"
-  su -c busybox chroot $CHROOT_DIR "/usr/sbin/usermod -aG sudo $USRNAME"
   su -c busybox chroot $CHROOT_DIR "/usr/sbin/usermod -aG aid_inet,aid_net_raw,aid_net_admin,aid_net_bt,aid_net_bt_admin $USRNAME"
   su -c busybox chroot $CHROOT_DIR "/usr/sbin/usermod -aG aid_inet,aid_net_raw,aid_net_admin,aid_net_bt,aid_net_bt_admin root"
-  su -c busybox chroot $CHROOT_DIR "/usr/sbin/usermod -g 3003 _apt"
   echo -e "\nCopying installation scripts and required files to the chroot"
 
   sudo mkdir -p $CHROOT_DIR/home/$USRNAME/scripts
   sudo cp setup/*.sh $CHROOT_DIR/home/$USRNAME/scripts
   sudo chmod -R a+rwx $CHROOT_DIR/home/$USRNAME/scripts
-  ID="$(sudo cat /etc/os-release | gawk -F "=" '/\<ID\>/{print $2}')"
+  ID="$(sudo cat $CHROOT_DIR/etc/os-release | gawk -F "=" '/\<ID\>/{print $2}')"
   if [ "$ID" == "ubuntu" ] || [ "$ID" == "debian" ]
   then
   		echo -e "\nInstalling required dependencies"
+  		su -c busybox chroot $CHROOT_DIR "/usr/sbin/usermod -g 3003 _apt"
 		su -c busybox chroot $CHROOT_DIR '/bin/su - root -c "apt update"'
-		su -c busybox chroot $CHROOT_DIR '/bin/su - root -c "apt install sudo wget gnupg2 xwayland -y"'             
+		su -c busybox chroot $CHROOT_DIR '/bin/su - root -c "apt install sudo wget gnupg2 xwayland -y"'
+		su -c busybox chroot $CHROOT_DIR "/usr/sbin/usermod -aG sudo $USRNAME"             
   elif [[ "$ID" =~ "arch" ]] || [[ "$ID" =~ "manjaro" ]]
   then
 		NOTDEBIAN=true

@@ -199,13 +199,13 @@ fi
 		fi
 	
 
-	if [ -d /proc/sys/fs/binfmt_misc ]
+	if [ -d /proc/sys/fs/binfmt_misc ] && [ -f $CHROOT_DIR/usr/bin/update-binfmts ]
 	then
 		sudo busybox mount --bind /proc/sys/fs/binfmt_misc $CHROOT_DIR/proc/sys/fs/binfmt_misc
 		echo -e "\nLoading binfmts entries"
 		su -c busybox chroot $CHROOT_DIR /usr/bin/sudo -u root -i "update-binfmts --enable"
 	else 
-		echo "Binfmt support not detected, skipping loading of binfmt entries"
+		echo -e "\nBinfmt support not detected or missing binfmt-support package, skipping loading of binfmt entries"
 	fi
 	
 	
