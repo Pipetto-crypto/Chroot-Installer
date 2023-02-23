@@ -44,7 +44,14 @@ make_image(){
     sudo tune2fs -O ^metadata_csum $INSPATH
     sudo tune2fs -i0 -c0 $INSPATH
     sudo mount -o loop $INSPATH $CHROOT_DIR
-    sudo tar --skip-old-files -xjf $ROOTFS -C $CHROOT_DIR
+    FILENAME="$(basename $ROOTFS)"
+    case "$FILENAME" in
+    *.tar.bz2)
+              sudo tar --skip-old-files -xjf $ROOTFS -C $INSPATH
+              ;;
+    *.tar.gz)
+              sudo tar --skip-old-files -xzf $ROOTFS -C $INSPATH
+    esac
     sudo umount -l $CHROOT_DIR
 }
 
@@ -112,14 +119,17 @@ first_setup(){
   sudo mkdir -p $CHROOT_DIR/home/$USRNAME/scripts
   sudo cp setup/*.sh $CHROOT_DIR/home/$USRNAME/scripts
   sudo chmod -R a+rwx $CHROOT_DIR/home/$USRNAME/scripts
-  ID_LIKEOS="$(sudo cat $CHROOT_DIR/etc/os-release | awk -F "=" '/ID_LIKE/{print $2}')"
-  if [ "$ID_LIKEOS" == "debian" ] || [ "$ID_LIKEOS" == "" ]
+  ID="$(sudo cat /etc/os-release | gawk -F "=" '/\<ID\>/{print $2}')"
+  if [ "$ID" == "ubuntu" ] || [ "$ID" == "debian" ]
   then
   		echo -e "\nInstalling required dependencies"
 		su -c busybox chroot $CHROOT_DIR '/bin/su - root -c "apt update"'
 		su -c busybox chroot $CHROOT_DIR '/bin/su - root -c "apt install sudo wget gnupg2 xwayland -y"'             
-  else
+  elif [[ "$ID" =~ "arch" ]] || [[ "$ID" =~ "manjaro" ]]
+  then
 		NOTDEBIAN=true
+		su -c busybox chroot $CHROOT_DIR '/bin/su - root -c "pacman -Syu --noconfirm"'
+        su -c busybox chroot $CHROOT_DIR '/bin/su - root -c "pacman -S --noconfirm sudo wget gnupg"'
 
   fi
 
@@ -135,16 +145,40 @@ install_de(){
 read -p "Select a DE among the available choices[xfce|lxqt|icewm|fluxbox]: " DE
 if [ "$DE" == "xfce" ]
 then
-	su -c busybox chroot $CHROOT_DIR /usr/bin/sudo -u root -i "apt install tigervnc-standalone-server tigervnc-common dbus-x11 tigervnc-xorg-extension xfce4 xfce4-goodies -y"
+	if [ "$ID" == "ubuntu" ] || [ "$ID" == "debian" ]
+	then
+		su -c busybox chroot $CHROOT_DIR /usr/bin/sudo -u root -i "apt install tigervnc-standalone-server tigervnc-common dbus-x11 tigervnc-xorg-extension xfce4 xfce4-goodies -y"
+	elif [[ "$ID" =~ "arch" ]] || [[ "$ID" =~ "manjaro" ]]
+	then
+		su -c busybox chroot $CHROOT_DIR /usr/bin/sudo -u root -i "pacman -S --noconfirm tigervnc dbus xfce4 xfce4-goodies"
+	fi
 elif [ "$DE" == "lxqt" ]
 then
-	su -c busybox chroot $CHROOT_DIR /usr/bin/sudo -u root -i "apt install tigervnc-standalone-server tigervnc-common dbus-x11 tigervnc-xorg-extension lxqt -y"
+	if [ "$ID" == "ubuntu" ] || [ "$ID" == "debian" ]
+	then
+		su -c busybox chroot $CHROOT_DIR /usr/bin/sudo -u root -i "apt install tigervnc-standalone-server tigervnc-common dbus-x11 tigervnc-xorg-extension lxqt -y"
+	elif [[ "$ID" =~ "arch" ]] || [[ "$ID" =~ "manjaro" ]]
+	then
+		su -c busybox chroot $CHROOT_DIR /usr/bin/sudo -u root -i "pacman -S --noconfirm tigervnc dbus lxqt"
+	fi
 elif [ "$DE" == "icewm" ]
 then
-	su -c busybox chroot $CHROOT_DIR /usr/bin/sudo -u root -i "apt install tigervnc-standalone-server tigervnc-common dbus-x11 tigervnc-xorg-extension icewm -y"
+	if [ "$ID" == "ubuntu" ] || [ "$ID" == "debian" ]
+	then
+		su -c busybox chroot $CHROOT_DIR /usr/bin/sudo -u root -i "apt install tigervnc-standalone-server tigervnc-common dbus-x11 tigervnc-xorg-extension icewm -y"
+	elif [[ "$ID" =~ "arch" ]] || [[ "$ID" =~ "manjaro" ]]
+	then
+		su -c busybox chroot $CHROOT_DIR /usr/bin/sudo -u root -i "pacman -S --noconfirm tigervnc dbus icewm"
+	fi
 elif [ "$DE" == "fluxbox" ]
 then
-	su -c busybox chroot $CHROOT_DIR /usr/bin/sudo -u root -i "apt install tigervnc-standalone-server tigervnc-common dbus-x11 tigervnc-xorg-extension fluxbox -y"
+	 if [ "$ID" == "ubuntu" ] || [ "$ID" == "debian" ]
+	 then
+	      su -c busybox chroot $CHROOT_DIR /usr/bin/sudo -u root -i "apt install tigervnc-standalone-server tigervnc-common dbus-x11 tigervnc-xorg-extension fluxbox -y"
+	  elif [[ "$ID" =~ "arch" ]] || [[ "$ID" =~ "manjaro" ]]
+	  then
+	      su -c busybox chroot $CHROOT_DIR /usr/bin/sudo -u root -i "pacman -S --noconfirm tigervnc dbus fluxbox"
+	fi
 fi
 
 	
@@ -190,6 +224,13 @@ then
 		wget http://cdimage.ubuntu.com/ubuntu-base/releases/jammy/release/ubuntu-base-22.04.1-base-arm64.tar.gz -P /sdcard
 	fi
 	ROOTFS=/sdcard/ubuntu-base-22.04.1-base-arm64.tar.gz
+elif [ "${argslist[3]}" == "manjaro" ]
+then
+	if [ ! -f /sdcard/Manjaro-ARM-aarch64-latest.tar.gz ]
+    then
+         wget https://github.com/manjaro-arm/rootfs/releases/download/20230220/Manjaro-ARM-aarch64-latest.tar.gz -P /sdcard
+    fi
+    ROOTFS=/sdcard/Manjaro-ARM-aarch64-latest.tar.gz
 else
 	echo -e "No valid distro or rootfs specified, exiting"
 	exit
@@ -238,7 +279,7 @@ first_setup
 
 for i in ${argslist[@]}
 do
-  if [ "$i" == "-d" ]  && [ "$NOTDEBIAN" == "false" ]
+  if [ "$i" == "-d" ]
   then
   		echo -e "\nInstalling a DE\n"
 		install_de
@@ -300,6 +341,7 @@ list (){
 echo -e "\nAvailable distros:\n"
 echo -e "Debian 11 Bullseye"
 echo -e "Ubuntu 22.04 JammyFish"
+echo -e "Manjaro ARM"
 
 }
 
