@@ -50,7 +50,13 @@ make_image(){
               sudo tar --skip-old-files -xjf $ROOTFS -C $INSPATH
               ;;
     *.tar.gz)
-              sudo tar --skip-old-files -xzf $ROOTFS -C $INSPATH
+			if [ "${argslist[3]}" == "manjaro" ]
+			then
+                  sudo bsdtar -k -xpf $ROOTFS -C $INSPATH
+            else
+            	  sudo tar --skip-old-files -xzf $ROOTFS -C $INSPATH
+            fi
+
     esac
     sudo umount -l $CHROOT_DIR
 }
@@ -67,8 +73,13 @@ make_folder(){
   	sudo tar --skip-old-files -xjf $ROOTFS -C $INSPATH
   	;;
   *.tar.gz)
-  	sudo tar --skip-old-files -xzf $ROOTFS -C $INSPATH
-  esac
+    if [ "${argslist[3]}" == "manjaro" ]
+    then
+        sudo bsdtar -k -xpf $ROOTFS -C $INSPATH
+    else
+      	sudo tar --skip-old-files -xzf $ROOTFS -C $INSPATH
+    fi
+    esac
   echo "INSPATH=$INSPATH" > $CONFIG_FILE
 	
 }
@@ -101,11 +112,12 @@ first_setup(){
   if [ "${argslist[3]}" == "manjaro" ]
   then
       sudo cp setup/pacman.conf $CHROOT_DIR/etc
-      su -c busybox chroot $CHROOT_DIR '/bin/su - root -c "pacman-key --init"'
-      su -c busybox chroot $CHROOT_DIR '/bin/su - root -c "pacman-key --populate archlinux-arm manjaro-arm manjaro"'
-      su -c busybox chroot $CHROOT_DIR '/bin/su - root -c "pacman-mirrors -f10"'
-      su -c busybox chroot $CHROOT_DIR '/bin/su - root -c "pacman -Syyu base manjaro-system manjaro-release --noconfirm"'
+      su -c busybox chroot $CHROOT_DIR '/usr/bin/pacman-key --init'
+      su -c busybox chroot $CHROOT_DIR '/usr/bin/pacman-key --populate archlinux-arm manjaro-arm manjaro'
+      su -c busybox chroot $CHROOT_DIR '/usr/bin/pacman-mirrors -f10'
+      su -c busybox chroot $CHROOT_DIR '/usr/bin/pacman -Syyu base manjaro-system manjaro-release --noconfirm'
       su -c busybox chroot $CHROOT_DIR "/usr/sbin/groupadd wheel"
+      su -c busybox chroot $CHROOT_DIR "/usr/sbin/useradd --create-home $USRNAME"
       su -c busybox chroot $CHROOT_DIR "/usr/sbin/usermod -aG wheel $USRNAME"
       
   fi    
@@ -367,24 +379,20 @@ mv chroot-installer $PATH
 
 help(){
 
+
+column1=("install" "remove" "list" "update" "help" "--custom" "-d" "-b")
+column2=("install the container with name containername and using distro specified by distro argument" "remove the container specified by argument containername alongside all of its files.Takes only argument containername" "list available distros" "update this script,takes no argument" "print this help message,takes no argument" "can be specified alongside install and in place of argument distro for inputting custom rootfses through the argument path, only debian-based rootfses are guaranteed to work" "install a desktop environment of your choice alongside VNC, disabled by default" "install box86 and box64 alongside wine to run x86 apps,disabled by default and only available for debian-based distros")
+
 echo -e "chroot-installer: chroot-installer [install|remove|update|list|help] containername distro|[--custom] path [-b,-d]"
 echo -e "\nScript thath help to install and remove chroot containers for rooted device with busybox installed.\n"
 echo -e "\nOptions:\n"
-echo -e "install      install the container with name containername and using distro specified by distro argument"
-echo -e "remove       remove the container specified by argument containername alongside all of its files.Takes only argument containername with no other options"
-echo -e "list         list available distros"
-echo -e "update       update this script,takes no argument"
-echo -e "help         print this help message,takes no argument\n"
-echo -e "--custom     can be specified alongside install and in place of argument distro for inputting custom rootfses through the argument path, only debian-based rootfses are guaranteed to work"
-echo -e "-d           install a desktop environment of your choice alongside VNC, disabled by default and only available for debian-based distros"
-echo -e "-b           install box86 and box64 alongside wine to run x86 apps,disabled by default and only available for debian-based distros"
+paste <(printf "%-40s\n" "${column1[@]}") <(printf "%20s\n" "${column2[@]}")
 echo -e "\nArguments:"
 echo -e "containersname  name of the container you want to install"
 echo -e "path            full path of the custom rootfs, to use only with --custom option"
 echo -e "distro          specify a distro to install, takes the place of --custom option. To check available distros use the list option"
 	
 }
-
 
 if [[ "$(su -c busybox)" =~ "not found" ]]
 then
@@ -428,3 +436,4 @@ do
 		break
 	fi
 done
+
