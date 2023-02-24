@@ -343,20 +343,28 @@ chmod +x $PATH/chroot-launcher $PATH/chroot-installer
 
 remove(){
 
-if [ -f $CONFIG_FILE ]
-then
-	INSPATH=$(cat $CONFIG_FILE | awk -F '=' '/INSPATH/{print $2}')
-	echo -e "Unmounting any running container"
-	sudo umount -l $CHROOT_DIR
-	sudo umount -l $CHROOT_DIR/media/*
-	echo -e "Deleting the selected container"
-	sudo rm -rf $INSPATH
-	sudo rm -rf $CONFIG_FILE
-else
-	echo -e "This container doesn't exist, provide an existing container"
-	exit
-fi
-
+index=1
+for i in "$@"
+do
+	if (( index>1 ))
+	then
+		CONFIG_FILE=$CONFIG_DIR/$i.conf
+		if [ -f $CONFIG_FILE ]
+		then
+			INSPATH=$(cat $CONFIG_FILE | awk -F '=' '/INSPATH/{print $2}')
+			echo -e "Unmounting any running container"
+			sudo umount -l $CHROOT_DIR >/dev/null 2>&1
+			sudo umount -l $CHROOT_DIR/media/* 2>&1
+			echo -e "Deleting the selected container"
+			sudo rm -rf $INSPATH
+			sudo rm -rf $CONFIG_FILE
+		else
+			printf "The container %s doesn't exist, please specify a valid container"
+			exit
+		fi
+	fi
+	index=$((index+1))
+done
 	
 }
 
@@ -381,17 +389,17 @@ help(){
 
 
 column1=("install" "remove" "list" "update" "help" "--custom" "-d" "-b")
-column2=("install the container with name containername and using distro specified by distro argument" "remove the container specified by argument containername alongside all of its files.Takes only argument containername" "list available distros" "update this script,takes no argument" "print this help message,takes no argument" "can be specified alongside install and in place of argument distro for inputting custom rootfses through the argument path, only debian-based rootfses are guaranteed to work" "install a desktop environment of your choice alongside VNC, disabled by default" "install box86 and box64 alongside wine to run x86 apps,disabled by default and only available for debian-based distros")
+column2=("install distro specified by distro argument in container containername" "remove the container specified by argument containername alongside all of its files" "list available distros and ther installation status" "update this script" "print this help message" "can be specified alongside install and in place of argument distro for inputting custom rootfses through the argument path, only debian-based rootfses are guaranteed to work" "install a desktop environment of your choice alongside VNC, disabled by default" "install box86 and box64 alongside wine to run x86 apps,disabled by default and only available for debian-based distros")
+argcolumn1=("containername" "path" "distro")
+argcolumn2=("arbitrary container name of user's choice" "full path to the custom rootfs, to use only with --custom option" "name of the distro to install")
 
 echo -e "chroot-installer: chroot-installer [install|remove|update|list|help] containername distro|[--custom] path [-b,-d]"
 echo -e "\nScript thath help to install and remove chroot containers for rooted device with busybox installed.\n"
 echo -e "\nOptions:\n"
-paste <(printf "%-40s\n" "${column1[@]}") <(printf "%20s\n" "${column2[@]}")
-echo -e "\nArguments:"
-echo -e "containersname  name of the container you want to install"
-echo -e "path            full path of the custom rootfs, to use only with --custom option"
-echo -e "distro          specify a distro to install, takes the place of --custom option. To check available distros use the list option"
-	
+paste <(printf "%-20s\n" "${column1[@]}") <(printf "%-20s\n" "${column2[@]}")
+echo -e "\nArguments:\n"
+paste <(printf "%-20s\n" "${argcolumn1[@]}") <(printf "%20s\n" "${argcolumn2[@]}")
+
 }
 
 if [[ "$(su -c busybox)" =~ "not found" ]]
