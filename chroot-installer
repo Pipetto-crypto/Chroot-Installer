@@ -1,41 +1,57 @@
 #!/bin/bash
 
-echo -e "WARNING: THIS SCRIPT IS UNTESTED ON ANDROID VERSIONS NEWER THAN 10, SO IT MAY NOT WORK. ISSUES ABOUT NOT WORKING ON NEWER ANDROID VERSIONS WILL ONLY BE ACCEPTED WHEN PROPER LOGS ARE PROVIDED"
-echo -e "\nWARNING: TERMUX:X11 APP MAY NOT WORK IN A CHROOT DEPENDING ON YOUR ANDROID VERSION. NO ISSUES WILL BE ACCEPTED ABOUT TERMUX:X11 AS THEY AREN'T RELATED TO THIS SCRIPT"
+#Colours
+
+RED="\e[1;31m"
+GREEN="\e[1;32m"
+WHITE="\e[0m"
+
+echo -e "$RED""\nWARNING: THIS SCRIPT IS UNTESTED ON ANDROID VERSIONS NEWER THAN 10, SO IT MAY NOT WORK. ISSUES ABOUT NOT WORKING ON NEWER ANDROID VERSIONS WILL ONLY BE ACCEPTED WHEN PROPER LOGS ARE PROVIDED""$WHITE"
+echo -e "$RED""\nWARNING: TERMUX:X11 APP MAY NOT WORK IN A CHROOT DEPENDING ON YOUR ANDROID VERSION. NO ISSUES WILL BE ACCEPTED ABOUT TERMUX:X11 AS THEY AREN'T RELATED TO THIS SCRIPT""$WHITE"
 #sleep 10
+
+#Variables
 
 CHROOT_DIR=/data/local/mnt
 CONFIG_DIR=~/.chroot_installer
 ANDROIDVERSION=$(getprop ro.build.version.release | cut -f1,2 -d '.')
 ROOTFS_DIR=~/installed-rootfs
+#this for cycle put all arguments into array argslist
 index=1
-for var in "$@"
+for var in "$@" 
 do
 	argslist[$index]=$var
 	index=$((index+1))
 done
+#Create a config file with the same name as the container
 CONFIG_FILE=$CONFIG_DIR/${argslist[2]}.conf
 NOTDEBIAN=false
 
+#function that makes the filesystem image where the rootfs get unpacked
 
 make_image(){
 
+#Ask user questions about the image
     echo -e "\nCreating the rootfs image, requires at least 8GB of storage\n"
     read -p "Select an image name: " IMGNAME
     read -p "Select an installation path: " SPATH
     read -p "Select image size in megabytes: " SIZE
 
+#Keep track of the user input installation path
     INSPATH=$SPATH/$IMGNAME.img
+#Calculate size in KB from user input size and use that to calculate dd count
     SIZEKB=$(($SIZE*1000))
     COUNT=$(($SIZEKB/4))
-
+#Write installation path to config file
     echo "INSPATH=$INSPATH" > $CONFIG_FILE
 
+#Unmount any mounted container before making the image
     if findmnt $CHROOT_DIR >/dev/null
     then
         sudo umount -l $CHROOT_DIR
     fi
 
+#Make the image only if it doesn't exist or if its size doesn't match the user input one. It disables some features that may not be supported by some older Android kernels as well.
     if [ ! -f $INSPATH ] || (( "$(du --apparent-size -k $INSPATH | cut -f1)" < $SIZE ))
     then
         sudo dd if=/dev/zero of=$INSPATH bs=4k count=$COUNT
@@ -43,7 +59,9 @@ make_image(){
     sudo mkfs.ext4 $INSPATH
     sudo tune2fs -O ^metadata_csum $INSPATH
     sudo tune2fs -i0 -c0 $INSPATH
+#Mount the image
     sudo mount -o loop $INSPATH $CHROOT_DIR
+#Based on the extension, we unpack the rootfs into the mounted image
     FILENAME="$(basename $ROOTFS)"
     case "$FILENAME" in
     *.tar.bz2)
@@ -61,10 +79,13 @@ make_image(){
     sudo umount -l $CHROOT_DIR
 }
 
+#Function to make a rootfs folder in case it has been chosen by user as installation method
 make_folder(){
 
+#Create a folder with the same name as the container
   INSPATH=$ROOTFS_DIR/${argslist[2]}
   mkdir -p $INSPATH
+#Gives it the right permissions
   sudo chmod 755 $INSPATH
   sudo chown 0:0 $INSPATH
   FILENAME="$(basename $ROOTFS)"
@@ -84,6 +105,7 @@ make_folder(){
 	
 }
 
+#Function that makes the last created container the default one
 mark_default(){
 
 for i in $CONFIG_DIR/* #check each file for default flag and remove it
@@ -102,54 +124,73 @@ echo "default" >> $CONFIG_FILE
 	
 }
 
+#Function that does some preliminary setups on the chroot
 first_setup(){
 
-  read -p "Input an username: " USRNAME
+echo -e "\nPreparing the chroot. This process will involve creating an user account, adding important Android groups, installing some required packages, importing some installation scripts and appending a bunch of variables to env. If it hangs for a few minutes, please wait"
+
+#check the chroot package manager and save it to variable
+if ls $CHROOT_DIR/usr/bin | grep -wq "apt$" 
+then 
+	PACKAGEMANAGER=apt
+else
+	PACKAGEMANAGER=pacman
+fi 
+
+#Check that the user didn't select a custom rootfs and in case write the installed distro in the config file
+if [ ! "${argslist[3]}" == "--custom" ]
+then
+  echo "DISTRO=${argslist[3]}" >> $CONFIG_FILE
+fi
+#Ask the user to create an username then write it in the config file
+
+  read -p $"\nInput an username: " USRNAME
   echo "USERNAME=$USRNAME" >> $CONFIG_FILE
   mark_default
+#Copy hostname and hosts in the chroot
   sudo cp $PREFIX/etc/resolv.conf $CHROOT_DIR/etc
   sudo cp setup/hosts $CHROOT_DIR/etc
-  if [ "${argslist[3]}" == "manjaro" ]
+#Additional setup required for Manjaro
+  if [ "$PACKAGEMANAGER" == "pacman" ]
   then
+#Copy custom pacman.conf to chroot with disabled signature checking
       sudo cp setup/pacman.conf $CHROOT_DIR/etc
-      su -c busybox chroot $CHROOT_DIR '/usr/bin/pacman-key --init'
-      su -c busybox chroot $CHROOT_DIR '/usr/bin/pacman-key --populate archlinux-arm manjaro-arm manjaro'
-      su -c busybox chroot $CHROOT_DIR '/usr/bin/pacman-mirrors -f10'
-      su -c busybox chroot $CHROOT_DIR '/usr/bin/pacman -Syyu base manjaro-system manjaro-release --noconfirm'
-      su -c busybox chroot $CHROOT_DIR "/usr/sbin/groupadd wheel"
-      su -c busybox chroot $CHROOT_DIR "/usr/sbin/useradd --create-home $USRNAME"
-      su -c busybox chroot $CHROOT_DIR "/usr/sbin/usermod -aG wheel $USRNAME"
+      su -c busybox chroot $CHROOT_DIR "/usr/bin/pacman-key --init >/dev/null 2>&1"
+      su -c busybox chroot $CHROOT_DIR "/usr/bin/pacman-key --populate archlinux-arm manjaro-arm manjaro >/dev/null 2>&1"
+      su -c busybox chroot $CHROOT_DIR "/usr/bin/pacman-mirrors -f10 >/dev/null 2>&1"
+      su -c busybox chroot $CHROOT_DIR "/usr/bin/pacman -Syyu base manjaro-system manjaro-release --noconfirm >/dev/null 2>&1"
+      su -c busybox chroot $CHROOT_DIR "/usr/sbin/groupadd wheel >/dev/null 2>&1"
+      su -c busybox chroot $CHROOT_DIR "/usr/sbin/useradd --create-home $USRNAME >/dev/null 2>&1"
+      su -c busybox chroot $CHROOT_DIR "/usr/sbin/usermod -aG wheel $USRNAME >/dev/null 2>&1"
       
   fi    
-  	
+#Set right permissions for hosts	
   sudo chown 0:0 $CHROOT_DIR/etc/hosts
   sudo chmod 644 $CHROOT_DIR/etc/hosts
+#Create a password for the user account, the root account, create Android specific groups
   su -c busybox chroot /data/local/mnt "/usr/bin/echo 'localhost' > $CHROOT_DIR/etc/hostname"
-  su -c busybox chroot $CHROOT_DIR "/usr/sbin/useradd --create-home $USRNAME"
+  su -c busybox chroot $CHROOT_DIR "/usr/sbin/useradd --create-home $USRNAME >/dev/null 2>&1"
+  echo -e "\nUser account created, please insert a password for it: "
   su -c busybox chroot $CHROOT_DIR "/usr/bin/passwd $USRNAME"
-  echo -e "\nUser password created, please insert one for the root account: "
+  echo -e "\nPassword registered, please insert one for your root account as well: "
   su -c busybox chroot $CHROOT_DIR "/usr/bin/passwd root"
-  su -c busybox chroot $CHROOT_DIR "/usr/sbin/groupadd -g 3001 aid_net_bt_admin"
-  su -c busybox chroot $CHROOT_DIR "/usr/sbin/groupadd -g 3002 aid_net_bt"
-  su -c busybox chroot $CHROOT_DIR "/usr/sbin/groupadd -g 3003 aid_inet"
-  su -c busybox chroot $CHROOT_DIR "/usr/sbin/groupadd -g 3004 aid_net_raw"
-  su -c busybox chroot $CHROOT_DIR "/usr/sbin/groupadd -g 3005 aid_net_admin"
-  su -c busybox chroot $CHROOT_DIR "/usr/sbin/usermod -aG aid_inet,aid_net_raw,aid_net_admin,aid_net_bt,aid_net_bt_admin $USRNAME"
-  su -c busybox chroot $CHROOT_DIR "/usr/sbin/usermod -aG aid_inet,aid_net_raw,aid_net_admin,aid_net_bt,aid_net_bt_admin root"
-  echo -e "\nCopying installation scripts and required files to the chroot"
+  su -c busybox chroot $CHROOT_DIR "/usr/sbin/groupadd -g 3001 aid_net_bt_admin >/dev/null 2>&1"
+  su -c busybox chroot $CHROOT_DIR "/usr/sbin/groupadd -g 3002 aid_net_bt >/dev/null 2>&1"
+  su -c busybox chroot $CHROOT_DIR "/usr/sbin/groupadd -g 3003 aid_inet >/dev/null 2>&1"
+  su -c busybox chroot $CHROOT_DIR "/usr/sbin/groupadd -g 3004 aid_net_raw >/dev/null 2>&1"
+  su -c busybox chroot $CHROOT_DIR "/usr/sbin/groupadd -g 3005 aid_net_admin >/dev/null 2>&1"
+  su -c busybox chroot $CHROOT_DIR "/usr/sbin/usermod -aG aid_inet,aid_net_raw,aid_net_admin,aid_net_bt,aid_net_bt_admin $USRNAME >/dev/null 2>&1"
+  su -c busybox chroot $CHROOT_DIR "/usr/sbin/usermod -aG aid_inet,aid_net_raw,aid_net_admin,aid_net_bt,aid_net_bt_admin root >/dev/null 2>&1"
 
-  sudo mkdir -p $CHROOT_DIR/home/$USRNAME/scripts
-  sudo cp setup/*.sh $CHROOT_DIR/home/$USRNAME/scripts
-  sudo chmod -R a+rwx $CHROOT_DIR/home/$USRNAME/scripts
-  ID="$(sudo cat $CHROOT_DIR/etc/os-release | gawk -F "=" '/\<ID\>/{print $2}')"
-  if [ "$ID" == "ubuntu" ] || [ "$ID" == "debian" ]
+  
+  #Install some required packages
+  if [ "$PACKAGEMANAGER" == "apt" ]
   then
-  		echo -e "\nInstalling required dependencies"
   		su -c busybox chroot $CHROOT_DIR "/usr/sbin/usermod -g 3003 _apt"
 		su -c busybox chroot $CHROOT_DIR '/bin/su - root -c "apt update"'
 		su -c busybox chroot $CHROOT_DIR '/bin/su - root -c "apt install sudo wget gnupg2 xwayland -y"'
 		su -c busybox chroot $CHROOT_DIR "/usr/sbin/usermod -aG sudo $USRNAME"             
-  elif [[ "$ID" =~ "arch" ]] || [[ "$ID" =~ "manjaro" ]]
+  elif [ "$PACKAGEMANAGER" == "pacman" ]
   then
 		NOTDEBIAN=true
 		su -c busybox chroot $CHROOT_DIR '/bin/su - root -c "pacman -Syu --noconfirm"'
@@ -157,7 +198,14 @@ first_setup(){
 
   fi
 
-  echo -e "\nAppending important env variables to profile and setting bash as the main shell"                         
+  echo -e "\nFirst setup almost completed, setting up the chroot env"
+  
+  sudo mkdir -p $CHROOT_DIR/home/$USRNAME/scripts
+  sudo cp setup/*.sh $CHROOT_DIR/home/$USRNAME/scripts
+  sudo chmod -R a+rwx $CHROOT_DIR/home/$USRNAME/scripts
+
+  
+  #Append important env variables to /etc/profile and also modify the main shell to bash                      
   su -c busybox chroot $CHROOT_DIR  /usr/bin/sudo -u $USRNAME -i "bash -c /home/$USRNAME/scripts/setup_env.sh"
 
 
@@ -167,39 +215,40 @@ first_setup(){
 install_de(){
 
 read -p "Select a DE among the available choices[xfce|lxqt|icewm|fluxbox]: " DE
+#check which DE has been chosen and install dependencies based on distro
 if [ "$DE" == "xfce" ]
 then
-	if [ "$ID" == "ubuntu" ] || [ "$ID" == "debian" ]
+	if [ "$PACKAGEMANAGER" == "apt" ]
 	then
 		su -c busybox chroot $CHROOT_DIR /usr/bin/sudo -u root -i "apt install tigervnc-standalone-server tigervnc-common dbus-x11 tigervnc-xorg-extension xfce4 xfce4-goodies -y"
-	elif [[ "$ID" =~ "arch" ]] || [[ "$ID" =~ "manjaro" ]]
+	elif [ "$PACKAGEMANAGER" == "pacman" ]
 	then
 		su -c busybox chroot $CHROOT_DIR /usr/bin/sudo -u root -i "pacman -S --noconfirm tigervnc dbus xfce4 xfce4-goodies"
 	fi
 elif [ "$DE" == "lxqt" ]
 then
-	if [ "$ID" == "ubuntu" ] || [ "$ID" == "debian" ]
+	if [ "$PACKAGEMANAGER" == "apt" ]
 	then
 		su -c busybox chroot $CHROOT_DIR /usr/bin/sudo -u root -i "apt install tigervnc-standalone-server tigervnc-common dbus-x11 tigervnc-xorg-extension lxqt -y"
-	elif [[ "$ID" =~ "arch" ]] || [[ "$ID" =~ "manjaro" ]]
+	elif [ "$PACKAGEMANAGER" == "pacman" ]
 	then
 		su -c busybox chroot $CHROOT_DIR /usr/bin/sudo -u root -i "pacman -S --noconfirm tigervnc dbus lxqt"
 	fi
 elif [ "$DE" == "icewm" ]
 then
-	if [ "$ID" == "ubuntu" ] || [ "$ID" == "debian" ]
+	if [ "$PACKAGEMANAGER" == "apt" ]
 	then
 		su -c busybox chroot $CHROOT_DIR /usr/bin/sudo -u root -i "apt install tigervnc-standalone-server tigervnc-common dbus-x11 tigervnc-xorg-extension icewm -y"
-	elif [[ "$ID" =~ "arch" ]] || [[ "$ID" =~ "manjaro" ]]
+	elif [ "$PACKAGEMANAGER" == "pacman" ]
 	then
 		su -c busybox chroot $CHROOT_DIR /usr/bin/sudo -u root -i "pacman -S --noconfirm tigervnc dbus icewm"
 	fi
 elif [ "$DE" == "fluxbox" ]
 then
-	 if [ "$ID" == "ubuntu" ] || [ "$ID" == "debian" ]
+	 if [ "$PACKAGEMANAGER" == "apt" ]
 	 then
 	      su -c busybox chroot $CHROOT_DIR /usr/bin/sudo -u root -i "apt install tigervnc-standalone-server tigervnc-common dbus-x11 tigervnc-xorg-extension fluxbox -y"
-	  elif [[ "$ID" =~ "arch" ]] || [[ "$ID" =~ "manjaro" ]]
+	  elif [ "$PACKAGEMANAGER" == "pacman" ]
 	  then
 	      su -c busybox chroot $CHROOT_DIR /usr/bin/sudo -u root -i "pacman -S --noconfirm tigervnc dbus fluxbox"
 	fi
@@ -344,7 +393,7 @@ chmod +x $PATH/chroot-launcher $PATH/chroot-installer
 remove(){
 
 index=1
-for i in "$@"
+for i in ${argslist[@]}
 do
 	if (( index>1 ))
 	then
@@ -359,8 +408,7 @@ do
 			sudo rm -rf $INSPATH
 			sudo rm -rf $CONFIG_FILE
 		else
-			printf "The container %s doesn't exist, please specify a valid container"
-			exit
+			printf "The container %s doesn't exist, please specify a valid container\n" "$i"
 		fi
 	fi
 	index=$((index+1))
@@ -370,10 +418,39 @@ done
 
 list (){
 
-echo -e "\nAvailable distros:\n"
-echo -e "Debian 11 Bullseye"
-echo -e "Ubuntu 22.04 JammyFish"
-echo -e "Manjaro ARM"
+debianstatus="$RED""NotInstalled""$WHITE"
+manjarostatus="$RED""NotInstalled""$WHITE"
+ubuntustatus="$RED""NotInstalled""$WHITE"
+
+index=1
+
+for conf in $CONFIG_DIR/*
+do
+	distro="$(cat $conf | gawk -F "=" '/DISTRO/{print $2}')"
+	installedistros[$index]="$distro"
+	index=$((index+1))
+done
+
+for dist in ${installedistros[@]}
+do
+	case "$dist" in
+	debian)
+			debianstatus="$GREEN""Installed""$WHITE"
+			;;
+	ubuntu)
+			ubuntustatus="$GREEN""Installed""$WHITE"
+			;;
+	manjaro)
+			manjarostatus="$GREEN""Installed""$WHITE"
+	esac
+done
+			
+			
+
+printf "\n%-s%19s\n" "Available distros:" "Status:"
+echo -e "\nDebian 11 Bullseye            $debianstatus"
+echo -e "Ubuntu 22.04 JammyFish        $ubuntustatus"
+echo -e "Manjaro ARM                   $manjarostatus"
 
 }
 
@@ -389,7 +466,7 @@ help(){
 
 
 column1=("install" "remove" "list" "update" "help" "--custom" "-d" "-b")
-column2=("install distro specified by distro argument in container containername" "remove the container specified by argument containername alongside all of its files" "list available distros and ther installation status" "update this script" "print this help message" "can be specified alongside install and in place of argument distro for inputting custom rootfses through the argument path, only debian-based rootfses are guaranteed to work" "install a desktop environment of your choice alongside VNC, disabled by default" "install box86 and box64 alongside wine to run x86 apps,disabled by default and only available for debian-based distros")
+column2=("install distro specified by distro argument in container containername" "remove the container specified by argument containername alongside all of its files" "list available distros and their installation status" "update this script" "print this help message" "can be specified alongside install and in place of argument distro for inputting custom rootfses through the argument path, only debian-based rootfses are guaranteed to work" "install a desktop environment of your choice alongside VNC, disabled by default" "install box86 and box64 alongside wine to run x86 apps,disabled by default and only available for debian-based distros")
 argcolumn1=("containername" "path" "distro")
 argcolumn2=("arbitrary container name of user's choice" "full path to the custom rootfs, to use only with --custom option" "name of the distro to install")
 
