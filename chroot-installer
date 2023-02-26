@@ -61,14 +61,14 @@ make_image(){
     FILENAME="$(basename $ROOTFS)"
     case "$FILENAME" in
     *.tar.bz2)
-              sudo tar --skip-old-files -xjf $ROOTFS -C $INSPATH
+              sudo tar --skip-old-files -xjf $ROOTFS -C $CHROOT_DIR
               ;;
     *.tar.gz)
 			if [ "${argslist[3]}" == "manjaro" ]
 			then
-                  sudo bsdtar -k -xpf $ROOTFS -C $INSPATH
+                  sudo bsdtar -k -xpf $ROOTFS -C $CHROOT_DIR
             else
-            	  sudo tar --skip-old-files -xzf $ROOTFS -C $INSPATH
+            	  sudo tar --skip-old-files -xzf $ROOTFS -C $CHROOT_DIR
             fi
 
     esac
@@ -140,7 +140,8 @@ then
 fi
 #Ask the user to create an username then write it in the config file
 
-  read -p $"\nInput an username: " USRNAME
+  echo -e "\n"
+  read -p "Input an username: " USRNAME
   echo "USERNAME=$USRNAME" >> $CONFIG_FILE
   mark_default
 #Copy hostname and hosts in the chroot
@@ -243,10 +244,10 @@ elif [ "$DE" == "fluxbox" ]
 then
 	 if [ "$PACKAGEMANAGER" == "apt" ]
 	 then
-	      su -c busybox chroot $CHROOT_DIR /usr/bin/sudo -u root -i "apt install tigervnc-standalone-server tigervnc-common dbus-x11 tigervnc-xorg-extension fluxbox -y"
+	      su -c busybox chroot $CHROOT_DIR /usr/bin/sudo -u root -i "apt install tigervnc-standalone-server tigervnc-common dbus-x11 tigervnc-xorg-extension fluxbox xterm -y"
 	  elif [ "$PACKAGEMANAGER" == "pacman" ]
 	  then
-	      su -c busybox chroot $CHROOT_DIR /usr/bin/sudo -u root -i "pacman -S --noconfirm tigervnc dbus fluxbox"
+	      su -c busybox chroot $CHROOT_DIR /usr/bin/sudo -u root -i "pacman -S --noconfirm tigervnc dbus fluxbox xterm"
 	fi
 fi
 
@@ -380,7 +381,7 @@ done
 		#check if kernel has binfmt_misc support and in case install right dependencies 
 		  if [ -d /proc/sys/fs/binfmt_misc ]
 		  then
-          		sudo busybox mount --bind /proc/sys/fs/binfmt_misc $CHROOT_DIR/proc/sys/fs/bin
+          		sudo busybox mount --bind /proc/sys/fs/binfmt_misc $CHROOT_DIR/proc/sys/fs/binfmt_misc
           		echo -e "\nInstalling binfmt entries"
           		su -c busybox chroot $CHROOT_DIR /usr/bin/sudo -u root -i "apt install binfmt-support -y"
           		sudo cp binfmt-confs/box86 binfmt-confs/box64  $CHROOT_DIR/usr/share/binfmts

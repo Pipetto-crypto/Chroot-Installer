@@ -169,6 +169,13 @@ else
 	exit
 fi
 
+if [ -d $CHROOT_DIR/home ]
+then
+    echo "Chroot already mounted, connecting"
+    su -c busybox chroot $CHROOT_DIR /bin/login -f $USERNAME
+    exit
+fi
+       
 #Start audio in the chroot
 	echo -e "\nInitializing the audio server"
 		pulseaudio --start --exit-idle-time=-1
@@ -208,7 +215,7 @@ fi
 		fi
 	
 #check if binfmt_misc support is available in kernel and binfmt-support package is installed
-	if [ -d /proc/sys/fs/binfmt_misc ] && [ -f $CHROOT_DIR/usr/bin/update-binfmts ]
+	if [ -d /proc/sys/fs/binfmt_misc ] && [ -f $CHROOT_DIR/usr/sbin/update-binfmts ]
 	then
 		sudo busybox mount --bind /proc/sys/fs/binfmt_misc $CHROOT_DIR/proc/sys/fs/binfmt_misc
 		echo -e "\nLoading binfmts entries"
@@ -295,14 +302,8 @@ do
 		stop
 		break
 	elif [ "$ARG1" = "start" ]
-        then    
-		if [ -d $CHROOT_DIR/home ]
-		then
-			echo "Chroot already mounted, connecting"
-			su -c busybox chroot $CHROOT_DIR /bin/login -f android
-		else 
-			start
-		fi
+    then
+    	start 
 		break
 	elif [ "$ARG1" = "restart" ]
 	then
