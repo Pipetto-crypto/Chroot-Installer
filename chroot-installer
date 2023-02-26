@@ -158,6 +158,7 @@ fi
   else
       sudo cp setup/pacman-arch.conf $CHROOT_DIR/etc/pacman.conf
       sudo cp setup/sudoers $CHROOT_DIR/etc/sudoers
+      sudo chmod 440 $CHROOT_DIR/etc/sudoers
   fi
       su -c busybox chroot $CHROOT_DIR "/usr/bin/pacman-key --init"
   if [ "${argslist[3]}" == "manjaro" ]
