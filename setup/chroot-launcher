@@ -1,5 +1,7 @@
 #!/bin/bash
 
+#Variables
+
 CONFIG_DIR=~/.chroot_installer
 LAST_ARGUMENT=$(echo "$@" | awk '{ print $NF }')
 CHROOT_DIR=/data/local/mnt
@@ -8,7 +10,7 @@ ANDROIDVERSION=$(getprop ro.build.version.release)
 ARG1=$1
 ARG2=$2
 
-
+#check if busybox is available and if not exit
 
 if [[ "$(su -c busybox)" =~ "not found" ]]
   then
@@ -16,6 +18,7 @@ if [[ "$(su -c busybox)" =~ "not found" ]]
       exit 0
   fi
 
+#check if Android Version is 12 and set max phantom processes
 if [ "$ANDROIDVERSION" == "12" ]
 then
 	if ! su -c device_config get activity_manager max_phantom_processes | grep -q "2147483647"
@@ -25,13 +28,14 @@ then
 fi		
 
 
+#check if external storage is present
 if [ -n "$(sudo ls -A /mnt/media_rw)" ]
 then
 	EXTERNAL_STORAGE=/mnt/media_rw/$(sudo ls /mnt/media_rw)
 fi
 
 
-#This function contains the commands required to start the Xwayland socket in the chroot.
+#This function contains the commands required to start a Xwayland server which the chroot can connect to.
 
 xwayland(){
 
@@ -47,6 +51,7 @@ sudo chmod a+rwx $CHROOT_DIR/tmp/runtime-$USERNAME/wayland-0
 
 }
 
+#function to update this script
 update(){
 
 git clone https://raw.githubusercontent.com/Pipetto-crypto/Chroot-Installer/master/chroot-launcher?token=GHSAT0AAAAAABZCGT55FGO2FJPUZ3DSSD5OY7REUIA
@@ -55,6 +60,7 @@ mv chroot_launcher $PATH
 	
 }
 
+#function that list installed containers
 list-containers(){
 
 for i in $CONFIG_DIR/*
@@ -65,6 +71,7 @@ done
 	
 }
 
+#function that marks one container as default
 mark-default(){
 
 for i in $CONFIG_DIR/* #check each file for default flag and remove it
@@ -79,6 +86,7 @@ echo "default" >> $CONFIG_DIR/$LAST_ARGUMENT.conf
 	
 }
 
+#function that start the chroot
 start(){
 
 
@@ -161,13 +169,13 @@ else
 	exit
 fi
 
-
+#Start audio in the chroot
 	echo -e "\nInitializing the audio server"
 		pulseaudio --start --exit-idle-time=-1
 		pacmd load-module module-native-protocol-tcp auth-ip-acl=127.0.0.1
 
 	echo -e "\nStarting the chroot"
-		
+#Mount the container based on installation method		
 		if findmnt $CHROOT_DIR >/dev/null
 		then
 		    sudo umount -l $CHROOT_DIR
@@ -184,11 +192,12 @@ fi
 		    sudo busybox mount --bind /$i $CHROOT_DIR/$i
 		done
 
+#Mount internal storage in chroot location /media/internal_storage
 	echo -e "\nBinding internal storage"
-        #This is not required if you are using proot-distro
         sudo mkdir -p $CHROOT_DIR/media/internal_storage
 		sudo bindfs -o perms=a+rwx --multithreaded $INTERNAL_STORAGE $CHROOT_DIR/media/internal_storage
 
+#Check if available then mount external storage in /media/external_storage
 		if [ -n "$(sudo ls -A /mnt/media_rw)" ]
 		then
 			echo -e "\nBinding external storage"
@@ -198,7 +207,7 @@ fi
 			echo -e "\nSD card is not present, won't mount external storage"
 		fi
 	
-
+#check if binfmt_misc support is available in kernel and binfmt-support package is installed
 	if [ -d /proc/sys/fs/binfmt_misc ] && [ -f $CHROOT_DIR/usr/bin/update-binfmts ]
 	then
 		sudo busybox mount --bind /proc/sys/fs/binfmt_misc $CHROOT_DIR/proc/sys/fs/binfmt_misc
@@ -211,7 +220,7 @@ fi
 	
 	if [ "$ARG2" = "-w" ]
 	then
-		xwayland #calls the xwayland function after starting the chroot
+		xwayland #calls the xwayland function if the -w option is provided
 		
 	fi
 	
@@ -221,33 +230,60 @@ fi
 
 }
 
+#function to stop the chroot
 stop(){
 
+#if termux-x11 is running kill it, to remove since it breaks it on next startup
 pid=$(sudo pidof com.termux.x11)
 if [ "$pid" != "" ];
 then
 	sudo kill $pid
 fi
-sudo umount -l $CHROOT_DIR
+if findmnt $CHROOT_DIR >/dev/null
+then
+    sudo umount -l $CHROOT_DIR
+else
+	echo -e "\nNo container seems to be mounted, exiting"
+fi
 
 
 }
 
+#Function that implements a help message
 help(){
+
+
+optscolumn1=(
+"start"
+"-w"
+"stop"
+"restart"
+"update"
+"list-containers"
+"mark-default"
+"help"
+)
+
+optscolumn2=(
+"launch the container specified by argument containername or chroot into the rootfs specified by argument filepath. If no container or filepath is provided it launches the one marked as default"
+"start a Xwayland server through Termux:X11, to use only with start or restart"
+"stop any running container then exit"
+"restart the container specified by argument containername, takes same options as start"
+"update this launcher script then exit"
+"list available containers then exit"
+"mark container specified by argument container name as default"
+"print this help message then exit"
+)
+
+
 
 echo -e "chroot-launcher: chroot-launcher [start|stop|restart|list-containers|mark-default] [-w] containername|filepath"
 echo -e "\nA launcher intended mainly for chroot-containers made with the utility chroot-installer, even though it can chroot into every rootfs as long as a full path to it is provided. The chroot is launched with audio, internal, and if available external storage by default"
 echo -e "\nOptions:\n"
-echo -e "\nstart     Launches the container specified by argument containername or chroot into the rootfs specified by argument filepath. If no container or filepath is provided it launches the one marked as default"
-echo -e "stop        Stops the container, takes no argument"
-echo -e "restart     Restart the container specified by argument containername, works like start."
-echo -e "update      Update this launcher script, takes no argument"
-echo -e "list-containers      List available containers, takes no argument"
-echo -e "mark-default       Mark container specficied by argument containername as default"
-echo -e "help        Print this help page,takes no argument\n"
+paste <(printf "%-20s\n" "${optscolumn1[@]}") <(printf "%-20s\n" "${optscolumn2[@]}")
 echo -e "\nArguments:\n"
 echo -e "\ncontainername     name of the container to be launched"
-echo -e "\nfilepath      Path to the rootfs that the script should try to launch. Used in place of containername"
+echo -e "\nfilepath          path to the rootfs that the script should try to launch, used in place of containername"
 
 }
 
