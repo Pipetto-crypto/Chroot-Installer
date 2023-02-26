@@ -145,39 +145,56 @@ fi
   echo "USERNAME=$USRNAME" >> $CONFIG_FILE
   mark_default
 #Copy hostname and hosts in the chroot
-  sudo cp $PREFIX/etc/resolv.conf $CHROOT_DIR/etc
+  sudo cp --remove-destination $PREFIX/etc/resolv.conf $CHROOT_DIR/etc
   sudo cp setup/hosts $CHROOT_DIR/etc
+
 #Additional setup required for Manjaro
   if [ "$PACKAGEMANAGER" == "pacman" ]
   then
 #Copy custom pacman.conf to chroot with disabled signature checking
+  if [ "${argslist[3]}" == "manjaro" ]
+  then
       sudo cp setup/pacman.conf $CHROOT_DIR/etc
-      su -c busybox chroot $CHROOT_DIR "/usr/bin/pacman-key --init >/dev/null 2>&1"
-      su -c busybox chroot $CHROOT_DIR "/usr/bin/pacman-key --populate archlinux-arm manjaro-arm manjaro >/dev/null 2>&1"
-      su -c busybox chroot $CHROOT_DIR "/usr/bin/pacman-mirrors -f10 >/dev/null 2>&1"
-      su -c busybox chroot $CHROOT_DIR "/usr/bin/pacman -Syyu base manjaro-system manjaro-release --noconfirm >/dev/null 2>&1"
-      su -c busybox chroot $CHROOT_DIR "/usr/sbin/groupadd wheel >/dev/null 2>&1"
-      su -c busybox chroot $CHROOT_DIR "/usr/sbin/useradd --create-home $USRNAME >/dev/null 2>&1"
-      su -c busybox chroot $CHROOT_DIR "/usr/sbin/usermod -aG wheel $USRNAME >/dev/null 2>&1"
-      
+  else
+      sudo cp setup/pacman-arch.conf $CHROOT_DIR/etc/pacman.conf
+      sudo cp setup/sudoers $CHROOT_DIR/etc/sudoers
+  fi
+      su -c busybox chroot $CHROOT_DIR "/usr/bin/pacman-key --init"
+  if [ "${argslist[3]}" == "manjaro" ]
+  then    
+      su -c busybox chroot $CHROOT_DIR "/usr/bin/pacman-key --populate archlinux-arm manjaro-arm manjaro"
+      su -c busybox chroot $CHROOT_DIR "/usr/bin/pacman-mirrors -f10"
+  else
+      su -c busybox chroot $CHROOT_DIR "/usr/bin/pacman-key --populate archlinux-arm"
+  fi
+    
+  if [ "${argslist[3]}" == "manjaro" ] 
+  then   
+      su -c busybox chroot $CHROOT_DIR "/usr/bin/pacman -Syyu base manjaro-system manjaro-release --noconfirm"
+  else
+      su -c busybox chroot $CHROOT_DIR "/usr/bin/pacman -Syyu base --noconfirm"
+  fi  
+      su -c busybox chroot $CHROOT_DIR "/usr/sbin/useradd --create-home $USRNAME"
+      su -c busybox chroot $CHROOT_DIR "/usr/sbin/groupadd wheel"
+      su -c busybox chroot $CHROOT_DIR "/usr/sbin/usermod -aG wheel $USRNAME"
   fi    
 #Set right permissions for hosts	
   sudo chown 0:0 $CHROOT_DIR/etc/hosts
   sudo chmod 644 $CHROOT_DIR/etc/hosts
 #Create a password for the user account, the root account, create Android specific groups
   su -c busybox chroot /data/local/mnt "/usr/bin/echo 'localhost' > $CHROOT_DIR/etc/hostname"
-  su -c busybox chroot $CHROOT_DIR "/usr/sbin/useradd --create-home $USRNAME >/dev/null 2>&1"
+  su -c busybox chroot $CHROOT_DIR "/usr/sbin/useradd --create-home $USRNAME"
   echo -e "\nUser account created, please insert a password for it: "
   su -c busybox chroot $CHROOT_DIR "/usr/bin/passwd $USRNAME"
   echo -e "\nPassword registered, please insert one for your root account as well: "
   su -c busybox chroot $CHROOT_DIR "/usr/bin/passwd root"
-  su -c busybox chroot $CHROOT_DIR "/usr/sbin/groupadd -g 3001 aid_net_bt_admin >/dev/null 2>&1"
-  su -c busybox chroot $CHROOT_DIR "/usr/sbin/groupadd -g 3002 aid_net_bt >/dev/null 2>&1"
-  su -c busybox chroot $CHROOT_DIR "/usr/sbin/groupadd -g 3003 aid_inet >/dev/null 2>&1"
-  su -c busybox chroot $CHROOT_DIR "/usr/sbin/groupadd -g 3004 aid_net_raw >/dev/null 2>&1"
-  su -c busybox chroot $CHROOT_DIR "/usr/sbin/groupadd -g 3005 aid_net_admin >/dev/null 2>&1"
-  su -c busybox chroot $CHROOT_DIR "/usr/sbin/usermod -aG aid_inet,aid_net_raw,aid_net_admin,aid_net_bt,aid_net_bt_admin $USRNAME >/dev/null 2>&1"
-  su -c busybox chroot $CHROOT_DIR "/usr/sbin/usermod -aG aid_inet,aid_net_raw,aid_net_admin,aid_net_bt,aid_net_bt_admin root >/dev/null 2>&1"
+  su -c busybox chroot $CHROOT_DIR "/usr/sbin/groupadd -g 3001 aid_net_bt_admin"
+  su -c busybox chroot $CHROOT_DIR "/usr/sbin/groupadd -g 3002 aid_net_bt"
+  su -c busybox chroot $CHROOT_DIR "/usr/sbin/groupadd -g 3003 aid_inet"
+  su -c busybox chroot $CHROOT_DIR "/usr/sbin/groupadd -g 3004 aid_net_raw"
+  su -c busybox chroot $CHROOT_DIR "/usr/sbin/groupadd -g 3005 aid_net_admin"
+  su -c busybox chroot $CHROOT_DIR "/usr/sbin/usermod -aG aid_inet,aid_net_raw,aid_net_admin,aid_net_bt,aid_net_bt_admin $USRNAME"
+  su -c busybox chroot $CHROOT_DIR "/usr/sbin/usermod -aG aid_inet,aid_net_raw,aid_net_admin,aid_net_bt,aid_net_bt_admin root"
 
   
   #Install some required packages
@@ -315,6 +332,13 @@ then
          wget https://github.com/manjaro-arm/rootfs/releases/download/20230220/Manjaro-ARM-aarch64-latest.tar.gz -P /sdcard
     fi
     ROOTFS=/sdcard/Manjaro-ARM-aarch64-latest.tar.gz
+elif [ "${argslist[3]}" == "arch" ]
+then
+	if [ ! -f /sdcard/ArchLinuxARM-aarch64-latest.tar.gz ]
+	then
+		wget http://os.archlinuxarm.org/os/ArchLinuxARM-aarch64-latest.tar.gz -P /sdcard
+	fi
+	ROOTFS=/sdcard/ArchLinuxARM-aarch64-latest.tar.gz		 
 else
 	echo -e "No valid distro or rootfs specified, exiting"
 	exit
@@ -376,7 +400,7 @@ done
  do
 	if [ "$i" == "-b" ]  &&	[ "$NOTDEBIAN" == "false" ]
   	then
-        echo -e "\nInstalling wine,box86,box64\n"
+        echo -e "\nInstalling wine,box86,box64\n"        
         su -c busybox chroot $CHROOT_DIR /usr/bin/sudo -u $USRNAME -i "bash -c /home/$USRNAME/scripts/install_box.sh"
 		#check if kernel has binfmt_misc support and in case install right dependencies 
 		  if [ -d /proc/sys/fs/binfmt_misc ]
@@ -437,6 +461,7 @@ list (){
 debianstatus="$RED""NotInstalled""$WHITE"
 manjarostatus="$RED""NotInstalled""$WHITE"
 ubuntustatus="$RED""NotInstalled""$WHITE"
+archstatus="$RED""NotInstalled""$WHITE"
 
 index=1
 #check all configs and save installed distros paramaters in an array
@@ -459,15 +484,19 @@ do
 			;;
 	manjaro)
 			manjarostatus="$GREEN""Installed""$WHITE"
+			;;
+	arch)
+			archstatus="$GREEN""Installed""$WHITE"
 	esac
 done
 			
 			
 
-printf "\n%-s%19s\n" "Available distros:" "Status:"
-echo -e "\nDebian 11 Bullseye            $debianstatus"
-echo -e "Ubuntu 22.04 JammyFish        $ubuntustatus"
-echo -e "Manjaro ARM                   $manjarostatus"
+printf "\n%-s%23s\n" "Available distros:" "Status:"
+echo -e "\nDebian 11 Bullseye                $debianstatus"
+echo -e "Ubuntu 22.04 JammyFish            $ubuntustatus"
+echo -e "Manjaro ARM64                     $manjarostatus"
+echo -e "Arch ARM64                        $archstatus"
 
 }
 
