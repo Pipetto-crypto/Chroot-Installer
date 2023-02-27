@@ -152,12 +152,17 @@ then
 fi
 
 #check that the container provided is valid and in case exit
-if [ "$INSPATH" == "" ] || [ "$USERNAME" == "" ]
+if [ "$INSPATH" == "" ]
 then
 	echo -e "This container seems to be damaged, exiting for safety"
 	exit
 fi
-	
+
+if [ "$USERNAME" == "" ]
+then
+      USERNAME=root
+fi
+
 if [ -f $INSPATH ]
 then
     INSMETHOD="file"
@@ -173,13 +178,12 @@ if [ -d $CHROOT_DIR/home ]
 then
     echo "Chroot already mounted, connecting"
     #check if login binary is available else default to an alternative method to access the chroot
-    if [ -f $CHROOT_DIR/bin/login ]
+    if ls $CHROOT_DIR/bin | grep -q login
     then
     	su -c busybox chroot $CHROOT_DIR /bin/login -f $USERNAME
     	exit
     else
-    	export PATH=$PATH:/usr/bin:/bin/:/usr/sbin:/sbin:/usr/local/bin:/usr/local/sbin
-    	su -c busybox chroot $CHROOT_DIR /bin/bash
+    	su -c busybox chroot $CHROOT_DIR /bin/sh
     	exit
     fi
 fi
@@ -241,12 +245,11 @@ fi
 	
 	echo -e "\nAll preparations completed, connecting now\n"
 	#check if login binary is available else default to an alternative method to access the chroot
-	if [ -f $CHROOT_DIR/bin/login ]
+	if ls $CHROOT_DIR/bin | grep -q login
 	then
 		su -c busybox chroot $CHROOT_DIR /bin/login -f $USERNAME
 	else
-	    export PATH=$PATH:/usr/bin:/bin/:/usr/sbin:/sbin:/usr/local/bin:/usr/local/sbin
-		su -c busybox chroot $CHROOT_DIR /bin/bash
+	    su -c busybox chroot $CHROOT_DIR /bin/sh
 	fi
 
 

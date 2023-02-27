@@ -70,6 +70,9 @@ make_image(){
             else
             	  sudo tar --skip-old-files -xzf $ROOTFS -C $CHROOT_DIR
             fi
+            ;;
+     *.tar.xz)
+     		sudo tar xvfp $ROOTFS -C $CHROOT_DIR
 
     esac
     sudo umount -l $CHROOT_DIR
@@ -96,7 +99,10 @@ make_folder(){
     else
       	sudo tar --skip-old-files -xzf $ROOTFS -C $INSPATH
     fi
-    esac
+    ;;
+    *.tar.xz)
+    sudo tar xvfp $ROOTFS -C $INSPATH
+   esac
   echo "INSPATH=$INSPATH" > $CONFIG_FILE
 	
 }
@@ -129,7 +135,8 @@ echo -e "\nPreparing the chroot. This process will involve creating an user acco
 if ls $CHROOT_DIR/usr/bin | grep -wq "apt$" 
 then 
 	PACKAGEMANAGER=apt
-else
+elif ls $CHROOT_DIR/usr/bin | grep -wq "pacman$"
+then
 	PACKAGEMANAGER=pacman
 fi 
 
@@ -185,25 +192,18 @@ fi
 if [ "${argslist[3]}" == "--custom" ]
 then
 #Copy modified etc/group to the chroot, avoid checking for too many binaries
-	sudo cp setup/group $CHROOT_DIR/etc/group
-	if [ -f $CHROOT_DIR/sbin/useradd ] && [ -f $CHROOT_DIR/bin/passwd ]
+	if [ ! -f $CHROOT_DIR/sbin/useradd ] && [ ! -f $CHROOT_DIR/bin/passwd ]
 	then
-	    su -c busybox chroot /data/local/mnt "/usr/bin/echo 'localhost' > $CHROOT_DIR/etc/hostname"
-		su -c busybox chroot $CHROOT_DIR "/usr/sbin/useradd --create-home $USRNAME"
-		echo -e "\nUser account created, please insert a password for it: "
-		su -c busybox chroot $CHROOT_DIR "/usr/bin/passwd $USRNAME"
-        echo -e "\nPassword registered, please insert one for your root account as well: "
-		su -c busybox chroot $CHROOT_DIR "/usr/bin/passwd $USRNAME"
-		echo "USERNAME=$USRNAME" >> $CONFIG_FILE
-	else
-		echo -e "\nCreating an user account is not possible in this rootfs, skipping" 
-	fi
-
-else	
-
+		echo -e "\nCreating an user account is not possible in this rootfs so I can't set it up any further, exiting"
+		sudo umount -l $CHROOT_DIR
+		echo "USERNAME=" >> $CONFIG_FILE
+		mark_default
+		exit 
+	fi	
+fi
 #Create a password for the user account, the root account, create Android specific groups
   su -c busybox chroot /data/local/mnt "/usr/bin/echo 'localhost' > $CHROOT_DIR/etc/hostname"
-  if [ "${argslist[3]}" == "ubuntu" ] || [ "${argslist[3]}" == "ubuntu" ]
+  if [ "${argslist[3]}" == "ubuntu" ] || [ "${argslist[3]}" == "ubuntu" ] || [ "${argslist[3]}" == "--custom" ]
   then
   	  su -c busybox chroot $CHROOT_DIR "/usr/sbin/useradd --create-home $USRNAME"
   fi
@@ -216,12 +216,12 @@ else
   su -c busybox chroot $CHROOT_DIR "/usr/sbin/groupadd -g 3003 aid_inet"
   su -c busybox chroot $CHROOT_DIR "/usr/sbin/groupadd -g 3004 aid_net_raw"
   su -c busybox chroot $CHROOT_DIR "/usr/sbin/groupadd -g 3005 aid_net_admin"
+  su -c busybox chroot $CHROOT_DIR "/usr/sbin/groupadd sudo"
   su -c busybox chroot $CHROOT_DIR "/usr/sbin/usermod -aG aid_inet,aid_net_raw,aid_net_admin,aid_net_bt,aid_net_bt_admin $USRNAME"
   su -c busybox chroot $CHROOT_DIR "/usr/sbin/usermod -aG aid_inet,aid_net_raw,aid_net_admin,aid_net_bt,aid_net_bt_admin root"
   su -c busybox chroot $CHROOT_DIR "/usr/sbin/usermod -aG sudo $USRNAME"
   echo "USERNAME=$USRNAME" >> $CONFIG_FILE
 
-fi
   #Install some required packages
   if [ "$PACKAGEMANAGER" == "apt" ]
   then
@@ -245,7 +245,7 @@ fi
 
   
   #Append important env variables to /etc/profile and also modify the main shell to bash                      
-  su -c busybox chroot $CHROOT_DIR '/bin/su - root -c "bash -c /home/$USRNAME/scripts/setup_env.sh"'
+  su -c busybox chroot $CHROOT_DIR "/bin/su - root -c "bash -c /home/$USRNAME/scripts/setup_env.sh""
   #Mark the newly created container as default
   mark_default
   
