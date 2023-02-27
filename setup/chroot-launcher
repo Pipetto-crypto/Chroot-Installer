@@ -7,8 +7,14 @@ LAST_ARGUMENT=$(echo "$@" | awk '{ print $NF }')
 CHROOT_DIR=/data/local/mnt
 INTERNAL_STORAGE=/sdcard
 ANDROIDVERSION=$(getprop ro.build.version.release)
-ARG1=$1
-ARG2=$2
+index=1
+for var in "$@"
+do
+    argslist[$index]=$var
+    index=$((index+1))
+done
+
+
 
 #check if busybox is available and if not exit
 
@@ -71,6 +77,28 @@ done
 	
 }
 
+check_parameters(){
+
+exitcode=1
+
+for i in $1
+do
+	position=1
+	for e in $2
+	do
+		if [ "$i" == "$e" ]
+		then
+			exitcode=0
+			break 2
+		fi
+	position=$((position+1))
+	done
+done
+
+return $exitcode
+
+}
+
 #function that marks one container as default
 mark-default(){
 
@@ -89,15 +117,17 @@ echo "default" >> $CONFIG_DIR/$LAST_ARGUMENT.conf
 #function that start the chroot
 start(){
 
+containerslist=$(list-containers)
 
 if [ -f $LAST_ARGUMENT  ] || [ -d $LAST_ARGUMENT ] #check if last argument was a file or a directory
 then
 	INSPATH=$LAST_ARGUMENT
 	read -p "What's the username associated with this container: " USERNAME
-
 #check if last argument was start or restart or -w option to know if you didn't provide any container argument
-elif [ "$LAST_ARGUMENT" == "-w" ] || [ "$LAST_ARGUMENT" == "start" ] || [ "$LAST_ARGUMENT" == "restart" ]    
+elif ! check_parameters "$containerslist" "${argslist[*]}"
 then
+
+	echo -e "The container you provided doesn't exist or you didn't provide any container, attempting to start the default one"
 	if (( $(ls -1 $CONFIG_DIR | wc -l ) == 1 )) #check the number of available containers and if there is only one start it
 	then
 		CONFIG="$CONFIG_DIR/*"
@@ -121,7 +151,6 @@ then
 #try to start the container provided by container argument		
 else
 	CONTAINEREXIST=false
-	containerslist=$(list-containers)
 	for i in $containerslist
 	do   #check if the container argument provided is in the container list
 		if [ "$LAST_ARGUMENT" == "$i" ] 
@@ -172,6 +201,12 @@ then
 else
 	echo -e "The container installation path doesn't seem to exist so I can't launch it, exiting"
 	exit
+fi
+
+#check if user has prompted for a custom username
+if check_parameters "-u" "${argslist[*]}"
+then
+	USERNAME=${argslist[$((position+1))]}
 fi
 
 if [ -d $CHROOT_DIR/home ]
@@ -237,10 +272,9 @@ fi
 	fi
 	
 	
-	if [ "$ARG2" = "-w" ]
+	if check_parameters "-w" "${argslist[*]}"
 	then
-		xwayland #calls the xwayland function if the -w option is provided
-		
+			xwayland #calls the xwayland function if the -w option is provided
 	fi
 	
 	echo -e "\nAll preparations completed, connecting now\n"
@@ -315,11 +349,11 @@ echo -e "\nfilepath          path to the rootfs that the script should try to la
 while [ True ];
 do
 	
-	if [ "$ARG1" = "stop" ]
+	if [ "${argslist[1]}" = "stop" ]
 	then
 		stop
 		break
-	elif [ "$ARG1" = "start" ]
+	elif [ "${argslist[1]}" = "start" ]
     then
     	start 
 		break

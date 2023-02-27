@@ -1,15 +1,16 @@
 #!/bin/bash
 
-RED="\e[1;31m"
-GREEN="\e[1;32m"
-WHITE="\e[0m"
 
-echo 	"**********************************************"
-echo 	"#                                            #"
-echo -e	"#           $RED CHROOT-INSTALLER v0.1$WHITE           #"
-echo 	"#                                            #"
-echo 	"**********************************************"
+numbers=("c" "a" "b" "n" "r" "d")	
+index=1
+for i in ${numbers[@]}
+do
+	if [ "$i" == "a" ]
+	then
+		echo $index
+		break
+	fi
+index=$((index+1))
+done	
 
-numbers=(1 2 3 4 5 6)	
-
-echo ${numbers[@]}
+echo ${numbers[$((index-1))]}
