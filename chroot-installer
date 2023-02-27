@@ -142,11 +142,12 @@ fi
 
   echo -e "\n"
   read -p "Input an username: " USRNAME
-  echo "USERNAME=$USRNAME" >> $CONFIG_FILE
-  mark_default
 #Copy hostname and hosts in the chroot
   sudo cp --remove-destination $PREFIX/etc/resolv.conf $CHROOT_DIR/etc
   sudo cp setup/hosts $CHROOT_DIR/etc
+#Copy sudoers in the chroot
+  sudo cp setup/sudoers $CHROOT_DIR/etc/sudoers
+  sudo chmod 440 $CHROOT_DIR/etc/sudoers
 
 #Additional setup required for Manjaro
   if [ "$PACKAGEMANAGER" == "pacman" ]
@@ -157,8 +158,6 @@ fi
       sudo cp setup/pacman.conf $CHROOT_DIR/etc
   else
       sudo cp setup/pacman-arch.conf $CHROOT_DIR/etc/pacman.conf
-      sudo cp setup/sudoers $CHROOT_DIR/etc/sudoers
-      sudo chmod 440 $CHROOT_DIR/etc/sudoers
   fi
       su -c busybox chroot $CHROOT_DIR "/usr/bin/pacman-key --init"
   if [ "${argslist[3]}" == "manjaro" ]
@@ -182,9 +181,32 @@ fi
 #Set right permissions for hosts	
   sudo chown 0:0 $CHROOT_DIR/etc/hosts
   sudo chmod 644 $CHROOT_DIR/etc/hosts
+#Check if custom rootfs  has been used as it needs extra steps before continuing
+if [ "${argslist[3]}" == "--custom" ]
+then
+#Copy modified etc/group to the chroot, avoid checking for too many binaries
+	sudo cp setup/group $CHROOT_DIR/etc/group
+	if [ -f $CHROOT_DIR/sbin/useradd ] && [ -f $CHROOT_DIR/bin/passwd ]
+	then
+	    su -c busybox chroot /data/local/mnt "/usr/bin/echo 'localhost' > $CHROOT_DIR/etc/hostname"
+		su -c busybox chroot $CHROOT_DIR "/usr/sbin/useradd --create-home $USRNAME"
+		echo -e "\nUser account created, please insert a password for it: "
+		su -c busybox chroot $CHROOT_DIR "/usr/bin/passwd $USRNAME"
+        echo -e "\nPassword registered, please insert one for your root account as well: "
+		su -c busybox chroot $CHROOT_DIR "/usr/bin/passwd $USRNAME"
+		echo "USERNAME=$USRNAME" >> $CONFIG_FILE
+	else
+		echo -e "\nCreating an user account is not possible in this rootfs, skipping" 
+	fi
+
+else	
+
 #Create a password for the user account, the root account, create Android specific groups
   su -c busybox chroot /data/local/mnt "/usr/bin/echo 'localhost' > $CHROOT_DIR/etc/hostname"
-  su -c busybox chroot $CHROOT_DIR "/usr/sbin/useradd --create-home $USRNAME"
+  if [ "${argslist[3]}" == "ubuntu" ] || [ "${argslist[3]}" == "ubuntu" ]
+  then
+  	  su -c busybox chroot $CHROOT_DIR "/usr/sbin/useradd --create-home $USRNAME"
+  fi
   echo -e "\nUser account created, please insert a password for it: "
   su -c busybox chroot $CHROOT_DIR "/usr/bin/passwd $USRNAME"
   echo -e "\nPassword registered, please insert one for your root account as well: "
@@ -196,15 +218,17 @@ fi
   su -c busybox chroot $CHROOT_DIR "/usr/sbin/groupadd -g 3005 aid_net_admin"
   su -c busybox chroot $CHROOT_DIR "/usr/sbin/usermod -aG aid_inet,aid_net_raw,aid_net_admin,aid_net_bt,aid_net_bt_admin $USRNAME"
   su -c busybox chroot $CHROOT_DIR "/usr/sbin/usermod -aG aid_inet,aid_net_raw,aid_net_admin,aid_net_bt,aid_net_bt_admin root"
+  su -c busybox chroot $CHROOT_DIR "/usr/sbin/usermod -aG sudo $USRNAME"
+  echo "USERNAME=$USRNAME" >> $CONFIG_FILE
 
-  
+fi
   #Install some required packages
   if [ "$PACKAGEMANAGER" == "apt" ]
   then
   		su -c busybox chroot $CHROOT_DIR "/usr/sbin/usermod -g 3003 _apt"
 		su -c busybox chroot $CHROOT_DIR '/bin/su - root -c "apt update"'
-		su -c busybox chroot $CHROOT_DIR '/bin/su - root -c "apt install sudo wget gnupg2 xwayland -y"'
-		su -c busybox chroot $CHROOT_DIR "/usr/sbin/usermod -aG sudo $USRNAME"             
+		su -c busybox chroot $CHROOT_DIR '/bin/su - root -c "apt install sudo wget gnupg2 xwayland -y"'     
+
   elif [ "$PACKAGEMANAGER" == "pacman" ]
   then
 		NOTDEBIAN=true
@@ -221,8 +245,10 @@ fi
 
   
   #Append important env variables to /etc/profile and also modify the main shell to bash                      
-  su -c busybox chroot $CHROOT_DIR  /usr/bin/sudo -u $USRNAME -i "bash -c /home/$USRNAME/scripts/setup_env.sh"
-
+  su -c busybox chroot $CHROOT_DIR '/bin/su - root -c "bash -c /home/$USRNAME/scripts/setup_env.sh"'
+  #Mark the newly created container as default
+  mark_default
+  
 
 
 }
@@ -571,6 +597,20 @@ then
     fi
 fi
 
+if [ "$(findmnt -o FS-OPTIONS /data | awk -F "," '{print $1}' | tail -n 1)" == "ro" ]
+then
+	echo -e "\nData partition is mounted as read-only, trying to mount it as rw but depending on the phone's manufacturer this operation may fail"
+	sudo busybox mount -o rw,remount /data
+	if [ "$(findmnt -o FS-OPTIONS /data | awk -F "," '{print $1}' | tail -n 1)" == "ro" ]
+	then
+		echo -e "\nOperation failed, exiting"
+		exit
+	else
+		echo -e "\nOperation succeeded, continuing"
+	fi
+fi
+
+	
 while [ True ]
 do
 	if [ "${argslist[1]}" == "install" ]

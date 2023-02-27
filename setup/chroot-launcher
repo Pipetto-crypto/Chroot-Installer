@@ -172,8 +172,16 @@ fi
 if [ -d $CHROOT_DIR/home ]
 then
     echo "Chroot already mounted, connecting"
-    su -c busybox chroot $CHROOT_DIR /bin/login -f $USERNAME
-    exit
+    #check if login binary is available else default to an alternative method to access the chroot
+    if [ -f $CHROOT_DIR/bin/login ]
+    then
+    	su -c busybox chroot $CHROOT_DIR /bin/login -f $USERNAME
+    	exit
+    else
+    	export PATH=$PATH:/usr/bin:/bin/:/usr/sbin:/sbin:/usr/local/bin:/usr/local/sbin
+    	su -c busybox chroot $CHROOT_DIR /bin/bash
+    	exit
+    fi
 fi
        
 #Start audio in the chroot
@@ -232,7 +240,14 @@ fi
 	fi
 	
 	echo -e "\nAll preparations completed, connecting now\n"
-	su -c busybox chroot $CHROOT_DIR /bin/login -f $USERNAME
+	#check if login binary is available else default to an alternative method to access the chroot
+	if [ -f $CHROOT_DIR/bin/login ]
+	then
+		su -c busybox chroot $CHROOT_DIR /bin/login -f $USERNAME
+	else
+	    export PATH=$PATH:/usr/bin:/bin/:/usr/sbin:/sbin:/usr/local/bin:/usr/local/sbin
+		su -c busybox chroot $CHROOT_DIR /bin/bash
+	fi
 
 
 }
