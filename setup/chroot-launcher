@@ -357,24 +357,24 @@ do
     then
     	start 
 		break
-	elif [ "$ARG1" = "restart" ]
+	elif [ "${argslist[1]}" = "restart" ]
 	then
 		stop
 		start
 		break
-	elif [ "$ARG1" == "update" ]
+	elif [ "${argslist[1]}" == "update" ]
 	then
 		update
 		break
-	elif [ "$ARG1" == "list-containers" ]
+	elif [ "${argslist[1]}" == "list-containers" ]
 	then
 		list-containers
 		break
-	elif [ "$ARG1" == "mark-default" ]
+	elif [ "${argslist[1]}" == "mark-default" ]
 	then
 		mark-default
 		break
-	elif [ "$ARG1" = "help" ]
+	elif [ "${argslist[1]}" = "help" ]
 	then
 		help
 		break
