@@ -151,6 +151,7 @@ fi
   read -p "Input an username: " USRNAME
 #Copy hostname and hosts in the chroot
   sudo cp --remove-destination $PREFIX/etc/resolv.conf $CHROOT_DIR/etc
+  sudo chmod 644 $CHROOT_DIR/etc/resolv.conf
   sudo cp setup/hosts $CHROOT_DIR/etc
 #Copy sudoers in the chroot
   sudo cp setup/sudoers $CHROOT_DIR/etc/sudoers
@@ -282,7 +283,7 @@ then
 		su -c busybox chroot $CHROOT_DIR /usr/bin/sudo -u root -i "apt install tigervnc-standalone-server tigervnc-common dbus-x11 tigervnc-xorg-extension icewm -y"
 	elif [ "$PACKAGEMANAGER" == "pacman" ]
 	then
-		su -c busybox chroot $CHROOT_DIR /usr/bin/sudo -u root -i "pacman -S --noconfirm tigervnc dbus icewm"
+		su -c busybox chroot $CHROOT_DIR /usr/bin/sudo -u root -i "pacman -S --noconfirm tigervnc dbus icewm xorg-fonts-misc xterm"
 	fi
 elif [ "$DE" == "fluxbox" ]
 then
