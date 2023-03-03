@@ -21,7 +21,6 @@ do
 done
 #Create a config file with the same name as the container
 CONFIG_FILE=$CONFIG_DIR/${argslist[2]}.conf
-NOTDEBIAN=false
 
 #function that makes the filesystem image where the rootfs get unpacked
 
@@ -232,7 +231,6 @@ fi
 
   elif [ "$PACKAGEMANAGER" == "pacman" ]
   then
-		NOTDEBIAN=true
 		su -c busybox chroot $CHROOT_DIR '/bin/su - root -c "pacman -Syu --noconfirm"'
         su -c busybox chroot $CHROOT_DIR '/bin/su - root -c "pacman -S --noconfirm sudo wget gnupg"'
 

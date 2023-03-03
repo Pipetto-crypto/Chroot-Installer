@@ -1,7 +1,0 @@
-root:x:0:root
-users:x:100
-aid_net_bt_admin:x:3001:root
-aid_net_bt:x:3002:root
-aid_inet:x:3003:root
-aid_net_raw:x:3004:root
-aid_net_admin:x:3005:root

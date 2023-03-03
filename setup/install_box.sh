@@ -1,5 +1,8 @@
 #!/bin/bash
 
+VERSION=7.5
+ARCH=amd64
+
 echo -e "Adding armhf architechture"
 
 sudo dpkg --add-architecture armhf
@@ -21,16 +24,13 @@ sudo apt update && sudo apt install box86 -y
 sudo ln /usr/local/bin/box86 /usr/bin/box86
 sudo ln /usr/local/bin/box64 /usr/bin/box64
 
-echo -e "Installing wine64 and wine"
+echo -e "Installing wine"
 
-mkdir -p $HOME/wine
-mkdir -p $HOME/wine64
-wget http://www.playonlinux.com/wine/binaries/phoenicis/upstream-linux-x86/PlayOnLinux-wine-7.0-rc1-upstream-linux-x86.tar.gz
-wget http://www.playonlinux.com/wine/binaries/phoenicis/upstream-linux-amd64/PlayOnLinux-wine-6.14-upstream-linux-amd64.tar.gz
-tar -xzvf PlayOnLinux-wine-7.0-rc1-upstream-linux-x86.tar.gz -C wine
-tar -xzvf PlayOnLinux-wine-6.14-upstream-linux-amd64.tar.gz -C wine64
-echo "alias win32='WINEPREFIX=~/.wine32 WINEARCH=win32'" >> $HOME/.bashrc
-echo "export PATH=$PATH:~/wine/bin:~/wine64/bin" >> $HOME/.bashrc
+wget https://github.com/Kron4ek/Wine-Builds/releases/download/$VERSION/wine-$VERSION-$ARCH.tar.xz
+tar -xvf wine-$VERSION-$ARCH.tar.xz
+mv wine-$VERSION-$ARCH wine
+
+echo "export PATH=$PATH:~/wine64/bin" >> $HOME/.bashrc
 
 echo -e "Installing bash_x86 and bash_x64"
 
