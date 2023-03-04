@@ -9,7 +9,7 @@ WHITE="\e[0m"
 #Variables
 
 CHROOT_DIR=/data/local/mnt
-CONFIG_DIR=~/.chroot_installer
+CONTAINERS_DIR=~/.chroot_installer/containers
 ANDROIDVERSION=$(getprop ro.build.version.release | cut -f1,2 -d '.')
 ROOTFS_DIR=~/installed-rootfs
 #this for cycle put all arguments into array argslist
@@ -21,7 +21,7 @@ do
 done
 
 #Create a config file with the same name as the container
-CONFIG_FILE=$CONFIG_DIR/${argslist[2]}.conf
+CONFIG_FILE=$CONTAINERS_DIR/${argslist[2]}.conf
 ARCH=$(uname -m)
 ISCUSTOM=false
 
@@ -129,7 +129,7 @@ make_folder(){
 #Function that makes the last created container the default one
 mark_default(){
 
-for i in $CONFIG_DIR/* #check each file for default flag and remove it
+for i in $CONTAINERS_DIR/* #check each file for default flag and remove it
 do
     if [ "$(tail -n 1 $i)" == "default" ]
     then
@@ -398,7 +398,7 @@ echo -e "\nInitialization installation of the rootfs\n"
 
 su -c mkdir -p $CHROOT_DIR
 su -c chown 755 $CHROOT_DIR
-mkdir -p $CONFIG_DIR
+mkdir -p $CONTAINERS_DIR
 touch $CONFIG_FILE
 read -p "Select an installation method: " INSMETHOD
 
@@ -490,7 +490,7 @@ for i in ${argslist[@]}
 do
 	if (( index>1 ))
 	then
-		CONFIG_FILE=$CONFIG_DIR/$i.conf
+		CONFIG_FILE=$CONTAINERS_DIR/$i.conf
 		if [ -f $CONFIG_FILE ]
 		then
 			INSPATH=$(cat $CONFIG_FILE | awk -F '=' '/INSPATH/{print $2}')
@@ -519,7 +519,7 @@ archstatus="$RED""NotInstalled""$WHITE"
 
 index=1
 #check all configs and save installed distros paramaters in an array
-for conf in $CONFIG_DIR/*
+for conf in $CONTAINERS_DIR/*
 do
 	distro="$(cat $conf | gawk -F "=" '/DISTRO/{print $2}')"
 	installedistros[$index]="$distro"

@@ -2,6 +2,7 @@
 
 #Variables
 
+CONTAINERS_DIR=~/.chroot_installer/containers
 CONFIG_DIR=~/.chroot_installer
 LAST_ARGUMENT=$(echo "$@" | awk '{ print $NF }')
 CHROOT_DIR=/data/local/mnt
@@ -69,11 +70,19 @@ mv chroot_launcher $PATH
 #function that list installed containers
 list-containers(){
 
-for i in $CONFIG_DIR/*
+for i in $CONTAINERS_DIR/*
 do
 	CONTAINER=$(basename -- $i)
 	echo "${CONTAINER%.*}"
 done
+	
+}
+
+#from a config file, return the container name belonging to it
+get_container(){
+	
+strippedconfig=$(basename -- $1)
+echo "${strippedconfig%.*}"
 	
 }
 
@@ -99,10 +108,11 @@ return $exitcode
 
 }
 
+
 #function that marks one container as default
 mark-default(){
 
-for i in $CONFIG_DIR/* #check each file for default flag and remove it
+for i in $CONTAINERS_DIR/* #check each file for default flag and remove it
 do
 	if [ "$(tail -n 1 $i)" == "default" ]
 	then
@@ -110,7 +120,7 @@ do
 	fi
 done	
 
-echo "default" >> $CONFIG_DIR/$LAST_ARGUMENT.conf
+echo "default" >> $CONTAINERS_DIR/$LAST_ARGUMENT.conf
 	
 }
 
@@ -123,21 +133,42 @@ if [ -f $LAST_ARGUMENT  ] || [ -d $LAST_ARGUMENT ] #check if last argument was a
 then
 	INSPATH=$LAST_ARGUMENT
 	read -p "What's the username associated with this container: " USERNAME
+
+#check if a container is already running and so start it
+elif [ ! "$(cat $CONFIG_DIR/running.txt)" == "" ]
+then
+	if [ -d $CHROOT_DIR/home ]
+	  then
+	      echo "Chroot already mounted, connecting"
+	      #check if login binary is available else default to an alternative me
+	      if ls $CHROOT_DIR/bin | grep -q login
+	      then
+	          runningcontainer=$(cat $CONFIG_DIR/running.txt)
+	          CONFIG=$CONTAINERS_DIR/$runningcontainer.conf
+	          USERNAME=$(cat $CONFIG | awk -F '='  '/USERNAME/{print $2}')
+	          su -c busybox chroot $CHROOT_DIR /bin/login -f $USERNAME
+	          exit
+	      else
+	          su -c busybox chroot $CHROOT_DIR /bin/sh
+	          exit
+	      fi
+	  fi
+
 #check if last argument was start or restart or -w option to know if you didn't provide any container argument
 elif ! check_parameters "$containerslist" "${argslist[*]}"
 then
 
 	echo -e "The container you provided doesn't exist or you didn't provide any container, attempting to start the default one"
-	if (( $(ls -1 $CONFIG_DIR | wc -l ) == 1 )) #check the number of available containers and if there is only one start it
+	if (( $(ls -1 $CONTAINERS_DIR | wc -l ) == 1 )) #check the number of available containers and if there is only one start it
 	then
-		CONFIG="$CONFIG_DIR/*"
+		CONFIG="$CONTAINERS_DIR/*"
 		USERNAME=$(cat $CONFIG | awk -F '='  '/USERNAME/{print $2}')
 		INSPATH=$(cat $CONFIG | awk -F '=' '/INSPATH/{print $2}')
 		
 	else  #if there are more than one container start the default
 
 		DEFAULTFOUND=false
-		for i in $CONFIG_DIR/*
+		for i in $CONTAINERS_DIR/*
 		do
 			if [ "$(tail -n 1 $i)" == "default" ]
 			then
@@ -160,7 +191,7 @@ else
 	done 
 	if [ "$CONTAINEREXIST" == "true" ] 
 	then
-		CONFIG="$CONFIG_DIR/$LAST_ARGUMENT.conf"
+		CONFIG="$CONTAINERS_DIR/$LAST_ARGUMENT.conf"
 		USERNAME=$(cat $CONFIG | awk -F '='  '/USERNAME/{print $2}')
 		INSPATH=$(cat $CONFIG | awk -F '=' '/INSPATH/{print $2}')
 	fi
@@ -203,24 +234,11 @@ else
 	exit
 fi
 
+
 #check if user has prompted for a custom username
 if check_parameters "-u" "${argslist[*]}"
 then
 	USERNAME=${argslist[$((position+1))]}
-fi
-
-if [ -d $CHROOT_DIR/home ]
-then
-    echo "Chroot already mounted, connecting"
-    #check if login binary is available else default to an alternative method to access the chroot
-    if ls $CHROOT_DIR/bin | grep -q login
-    then
-    	su -c busybox chroot $CHROOT_DIR /bin/login -f $USERNAME
-    	exit
-    else
-    	su -c busybox chroot $CHROOT_DIR /bin/sh
-    	exit
-    fi
 fi
        
 #Start audio in the chroot
@@ -281,6 +299,8 @@ fi
 	#check if login binary is available else default to an alternative method to access the chroot
 	if ls $CHROOT_DIR/bin | grep -q login
 	then
+		runningcontainer=$(get_container $CONFIG)
+		echo "$runningcontainer" > $CONFIG_DIR/running.txt
 		su -c busybox chroot $CHROOT_DIR /bin/login -f $USERNAME
 	else
 	    su -c busybox chroot $CHROOT_DIR /bin/sh
@@ -294,7 +314,11 @@ stop(){
 
 #kill Xwayland and all the processes in the chroot
 su -c pkill -9 Xwayland
+runningcontainer=$(cat $CONFIG_DIR/running.txt)
+CONFIG=$CONTAINERS_DIR/$runningcontainer.conf
+USERNAME=$(cat $CONFIG | awk -F '='  '/USERNAME/{print $2}')
 su -c busybox chroot $CHROOT_DIR /usr/bin/pkill -9 -u $USERNAME
+rm -rf $CONFIG_DIR/running.txt
 if findmnt $CHROOT_DIR >/dev/null
 then
     su -c umount -l $CHROOT_DIR
