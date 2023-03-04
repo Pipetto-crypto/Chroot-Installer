@@ -14,7 +14,7 @@ do
     argslist[$index]=$var
     index=$((index+1))
 done
-
+ISRUNNING=false
 
 
 #check if busybox is available and if not exit
@@ -137,22 +137,10 @@ then
 #check if a container is already running and so start it
 elif [ ! "$(cat $CONFIG_DIR/running.txt)" == "" ]
 then
-	if [ -d $CHROOT_DIR/home ]
-	  then
-	      echo "Chroot already mounted, connecting"
-	      #check if login binary is available else default to an alternative me
-	      if ls $CHROOT_DIR/bin | grep -q login
-	      then
-	          runningcontainer=$(cat $CONFIG_DIR/running.txt)
-	          CONFIG=$CONTAINERS_DIR/$runningcontainer.conf
-	          USERNAME=$(cat $CONFIG | awk -F '='  '/USERNAME/{print $2}')
-	          su -c busybox chroot $CHROOT_DIR /bin/login -f $USERNAME
-	          exit
-	      else
-	          su -c busybox chroot $CHROOT_DIR /bin/sh
-	          exit
-	      fi
-	  fi
+	runningcontainer=$(cat $CONFIG_DIR/running.txt)
+	CONFIG=$CONTAINERS_DIR/$runningcontainer.conf
+	USERNAME=$(cat $CONFIG | awk -F '='  '/USERNAME/{print $2}')
+	ISRUNNING=true
 
 #check if last argument was start or restart or -w option to know if you didn't provide any container argument
 elif ! check_parameters "$containerslist" "${argslist[*]}"
@@ -178,6 +166,11 @@ then
 				INSPATH=$(cat $CONFIG | awk -F '=' '/INSPATH/{print $2}')
 			fi
 		done
+		if [ "$DEFAULTFOUND" == "false" ]
+		then
+			echo -e "No default container found, mark one as default or start with a container"
+			exit
+		fi
 	fi		
 #try to start the container provided by container argument		
 else
@@ -194,21 +187,11 @@ else
 		CONFIG="$CONTAINERS_DIR/$LAST_ARGUMENT.conf"
 		USERNAME=$(cat $CONFIG | awk -F '='  '/USERNAME/{print $2}')
 		INSPATH=$(cat $CONFIG | awk -F '=' '/INSPATH/{print $2}')
+	#check if the container exists and in case exit
+	else
+	    echo -e "The container you provided doesn't exist, exiting"
+	    exit
 	fi
-fi
-
-#check if a default container is found and in case exit
-if [ "$DEFAULTFOUND" == "false" ] 
-then
-    echo -e "No default container found, mark one as default or start with a container name"
-    exit
-fi
-
-#check if the container exists and in case exit
-if [ "$CONTAINEREXIST" == "false" ]
-then 
-	echo -e "The container you provided doesn't exist, exiting"
-	exit
 fi
 
 #check that the container provided is valid and in case exit
@@ -240,12 +223,14 @@ if check_parameters "-u" "${argslist[*]}"
 then
 	USERNAME=${argslist[$((position+1))]}
 fi
-       
-#Start audio in the chroot
+
+ if [ "$ISRUNNING" == "false" ]
+ then      
+	#Start audio in the chroot
 	echo -e "\nInitializing the audio server"
 		pulseaudio --start --exit-idle-time=-1
 		pacmd load-module module-native-protocol-tcp auth-ip-acl=127.0.0.1
-
+		
 	echo -e "\nStarting the chroot"
 #Mount the container based on installation method		
 		if findmnt $CHROOT_DIR >/dev/null
@@ -305,7 +290,15 @@ fi
 	else
 	    su -c busybox chroot $CHROOT_DIR /bin/sh
 	fi
-
+else
+	echo -e "Chroot already mounted, logging in"
+	if ls $CHROOT_DIR/bin | grep -q login
+	then
+		su -c busybox chroot $CHROOT_DIR /bin/login -f $USERNAME
+	else
+		su -c busybox chroot $CHROOT_DIR /bin/sh
+	fi
+fi
 
 }
 
