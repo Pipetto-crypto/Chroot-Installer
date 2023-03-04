@@ -50,9 +50,9 @@ echo "Creating the socket"
 su -c mkdir -p $CHROOT_DIR/tmp/runtime-$USERNAME
 su -c busybox chroot $CHROOT_DIR /usr/bin/sudo -u root -i "chown $USERNAME:$USERNAME /tmp/runtime-$USERNAME"
 taskset -c 4-7 termux-x11 &  
-sleep 20
+sleep 7
 su -c touch $CHROOT_DIR/tmp/runtime-$USERNAME/wayland-0
-su -c busybox mount --bind $TMPDIR/wayland-0 $CHROOT_DIR/tmp/runtime-$USERNAME/wayland-0
+su -c busybox mount --bind $TMPDIR/termux-x11 $CHROOT_DIR/tmp/runtime-$USERNAME/wayland-0
 su -c chmod a+rwx $CHROOT_DIR/tmp/runtime-$USERNAME/wayland-0
 
 }
@@ -249,7 +249,7 @@ fi
 #Mount internal storage in chroot location /media/internal_storage
 	echo -e "\nBinding internal storage"
         su -c mkdir -p $CHROOT_DIR/media/internal_storage
-		su -c /data/com.termux/files/usr/bin/bindfs -o perms=a+rwx --multithreaded $INTERNAL_STORAGE $CHROOT_DIR/media/internal_storage
+		su -c /data/data/com.termux/files/usr/bin/bindfs -o perms=a+rwx --multithreaded $INTERNAL_STORAGE $CHROOT_DIR/media/internal_storage
 
 #Check if available then mount external storage in /media/external_storage
 		if [ -n "$(sudo ls -A /mnt/media_rw)" ]

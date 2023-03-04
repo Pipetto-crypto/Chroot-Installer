@@ -12,24 +12,24 @@ echo -e "Installing required dependencies dependencies"
 
 sudo pacman -S base-devel git cmake python3 --needed --noconfirm
 
-if [ "$ARCH" == "aarch64" ] || [ "$OPMODES" == "32-bit, 64-bit" ]
+if [ "$ARCH" == "aarch64" ] || [ "$(echo $OPMODES)" == "32-bit, 64-bit" ]
 then
 	echo -e "Installing box64"
 
-	if ! ls -l /usr/local/bin/box64 | grep box64
+	if ! ls -l /usr/local/bin | grep -q box64
 	then
 		git clone https://github.com/ptitSeb/box64.git
 		cd box64
 		mkdir build
 		cd build
 		cmake .. -DRPI4ARM64=1 -DCMAKE_BUILD_TYPE=RelWithDebInfo
-		make -j$(nproc --all)
+		make -j4
 		sudo make install
 		cd ~
 		sudo ln -f /usr/local/bin/box64 /usr/bin/box64
 	fi
 else
-	if ! ls -l /usr/local/bin/box86 | grep box86
+	if ! ls -l /usr/local/bin | grep -q box86
 	then
 		git clone https://github.com/ptitSeb/box86
 		cd box86

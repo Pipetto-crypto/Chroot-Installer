@@ -114,13 +114,13 @@ make_folder(){
   FILENAME="$(basename $ROOTFS)"
   case "$FILENAME" in
   *.tar.bz2)
-  	su -c tar --skip-old-files -xjf $ROOTFS -C $INSPATH
+  	su -c busybox tar -kxjf $ROOTFS -C $INSPATH
   	;;
   *.tar.gz)
-    su -c tar --skip-old-files -xzf $ROOTFS -C $INSPATH
+    su -c busybox tar -kxzf $ROOTFS -C $INSPATH
     ;;
     *.tar.xz)
-    su -c tar xvfp $ROOTFS -C $INSPATH
+    su -c busybox tar -xfp $ROOTFS -C $INSPATH
    esac
   echo "INSPATH=$INSPATH" > $CONFIG_FILE
 	
@@ -169,7 +169,8 @@ fi
   echo -e "\n"
   read -p "Input an username: " USRNAME
 #Copy hostname and hosts in the chroot
-  su -c cp --remove-destination $PREFIX/etc/resolv.conf $CHROOT_DIR/etc
+  su -c rm -rf $CHROOT_DIR/etc/resolv.conf
+  su -c cp setup/resolv.conf $CHROOT_DIR/etc
   su -c chmod 644 $CHROOT_DIR/etc/resolv.conf
   su -c cp setup/hosts $CHROOT_DIR/etc
 #Copy sudoers in the chroot
@@ -445,7 +446,7 @@ done
 #check if -b option is present
  for i in ${argslist[@]}
  do
-	if [ "$i" == "-b" ]
+	if [ "$i" == "-b" ] && [ "$ISCUSTOM" == "false" ]
   	then #if manjaro or arch installation, installbonly box64
   		if [ "${argslist[3]}" == "manjaro" ] || [ "${argslist[3]}" == "arch" ]
   		then
