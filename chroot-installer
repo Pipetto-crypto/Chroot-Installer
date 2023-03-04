@@ -19,8 +19,38 @@ do
 	argslist[$index]=$var
 	index=$((index+1))
 done
+
 #Create a config file with the same name as the container
 CONFIG_FILE=$CONFIG_DIR/${argslist[2]}.conf
+ARCH=$(uname -m)
+ISCUSTOM=false
+
+#Distributions
+
+if [ "$ARCH" == "aarch64" ]
+then
+	UBUNTU_ROOTFS=ubuntu-base-22.04.1-base-arm64.tar.gz
+	DEBIAN_ROOTFS=debian.tar.bz2
+	MANJARO_ROOTFS=Manjaro-ARM-aarch64-latest.tar.gz
+	ARCH_ROOTFS=ArchLinuxARM-aarch64-latest.tar.gz
+elif [ "$ARCH" == "armv7l" ] || [ "$ARCH" == "armv8l" ]
+then
+	if [ "${argslist[3]}" == "manjaro" ]
+	then
+		echo -e "\nManjaro is not supported on armhf platforms, select another distro"
+		exit
+	elif [ "${argslist[3]}" == "debian" ]
+	then
+		echo -e "No custom debian armhf has been provided yet, please make one with debootstrap and use it with --custom option"
+		exit
+	fi
+	UBUNTU_ROOTFS=ubuntu-base-22.04.1-base-arm64.tar.gz
+	ARCH_ROOTFS=ArchLinuxARM-armv7-latest.tar.gz
+elif [ ! "${argslist[3]}" == "--custom" ]
+then
+	echo -e "This specific platform is not supported by any of the distros provided by this installer but you can still use a custom rootfs"
+	exit
+fi
 
 #function that makes the filesystem image where the rootfs get unpacked
 
@@ -43,38 +73,33 @@ make_image(){
 #Unmount any mounted container before making the image
     if findmnt $CHROOT_DIR >/dev/null
     then
-        sudo umount -l $CHROOT_DIR
+        su -c umount -l $CHROOT_DIR
     fi
 
 #Make the image only if it doesn't exist or if its size doesn't match the user input one. It disables some features that may not be supported by some older Android kernels as well.
     if [ ! -f $INSPATH ] || (( "$(du --apparent-size -k $INSPATH | cut -f1)" < $SIZE ))
     then
-        sudo dd if=/dev/zero of=$INSPATH bs=4k count=$COUNT
+        su -c dd if=/dev/zero of=$INSPATH bs=4k count=$COUNT
     fi
-    sudo mkfs.ext4 $INSPATH
-    sudo tune2fs -O ^metadata_csum $INSPATH
-    sudo tune2fs -i0 -c0 $INSPATH
+    su -c mke2fs -t ext4 $INSPATH
+    su -c tune2fs -O ^metadata_csum $INSPATH
+    su -c tune2fs -i0 -c0 $INSPATH
 #Mount the image
-    sudo mount -o loop $INSPATH $CHROOT_DIR
+    su -c busybox mount -o loop $INSPATH $CHROOT_DIR
 #Based on the extension, we unpack the rootfs into the mounted image
     FILENAME="$(basename $ROOTFS)"
     case "$FILENAME" in
     *.tar.bz2)
-              sudo tar --skip-old-files -xjf $ROOTFS -C $CHROOT_DIR
+              su -c tar --skip-old-files -xjf $ROOTFS -C $CHROOT_DIR
               ;;
     *.tar.gz)
-			if [ "${argslist[3]}" == "manjaro" ]
-			then
-                  sudo bsdtar -k -xpf $ROOTFS -C $CHROOT_DIR
-            else
-            	  sudo tar --skip-old-files -xzf $ROOTFS -C $CHROOT_DIR
-            fi
+			su -c tar --skip-old-files -xzf $ROOTFS -C $CHROOT_DIR
             ;;
      *.tar.xz)
-     		sudo tar xvfp $ROOTFS -C $CHROOT_DIR
+     		su -c tar xvfp $ROOTFS -C $CHROOT_DIR
 
     esac
-    sudo umount -l $CHROOT_DIR
+    su -c umount -l $CHROOT_DIR
 }
 
 #Function to make a rootfs folder in case it has been chosen by user as installation method
@@ -84,23 +109,18 @@ make_folder(){
   INSPATH=$ROOTFS_DIR/${argslist[2]}
   mkdir -p $INSPATH
 #Gives it the right permissions
-  sudo chmod 755 $INSPATH
-  sudo chown 0:0 $INSPATH
+  su -c chmod 755 $INSPATH
+  su -c chown 0:0 $INSPATH
   FILENAME="$(basename $ROOTFS)"
   case "$FILENAME" in
   *.tar.bz2)
-  	sudo tar --skip-old-files -xjf $ROOTFS -C $INSPATH
+  	su -c tar --skip-old-files -xjf $ROOTFS -C $INSPATH
   	;;
   *.tar.gz)
-    if [ "${argslist[3]}" == "manjaro" ]
-    then
-        sudo bsdtar -k -xpf $ROOTFS -C $INSPATH
-    else
-      	sudo tar --skip-old-files -xzf $ROOTFS -C $INSPATH
-    fi
+    su -c tar --skip-old-files -xzf $ROOTFS -C $INSPATH
     ;;
     *.tar.xz)
-    sudo tar xvfp $ROOTFS -C $INSPATH
+    su -c tar xvfp $ROOTFS -C $INSPATH
    esac
   echo "INSPATH=$INSPATH" > $CONFIG_FILE
 	
@@ -149,12 +169,12 @@ fi
   echo -e "\n"
   read -p "Input an username: " USRNAME
 #Copy hostname and hosts in the chroot
-  sudo cp --remove-destination $PREFIX/etc/resolv.conf $CHROOT_DIR/etc
-  sudo chmod 644 $CHROOT_DIR/etc/resolv.conf
-  sudo cp setup/hosts $CHROOT_DIR/etc
+  su -c cp --remove-destination $PREFIX/etc/resolv.conf $CHROOT_DIR/etc
+  su -c chmod 644 $CHROOT_DIR/etc/resolv.conf
+  su -c cp setup/hosts $CHROOT_DIR/etc
 #Copy sudoers in the chroot
-  sudo cp setup/sudoers $CHROOT_DIR/etc/sudoers
-  sudo chmod 440 $CHROOT_DIR/etc/sudoers
+  su -c cp setup/sudoers $CHROOT_DIR/etc/sudoers
+  su -c chmod 440 $CHROOT_DIR/etc/sudoers
 
 #Additional setup required for Manjaro
   if [ "$PACKAGEMANAGER" == "pacman" ]
@@ -162,9 +182,9 @@ fi
 #Copy custom pacman.conf to chroot with disabled signature checking
   if [ "${argslist[3]}" == "manjaro" ]
   then
-      sudo cp setup/pacman.conf $CHROOT_DIR/etc
+      su -c cp setup/pacman.conf $CHROOT_DIR/etc
   else
-      sudo cp setup/pacman-arch.conf $CHROOT_DIR/etc/pacman.conf
+      su -c cp setup/pacman-arch.conf $CHROOT_DIR/etc/pacman.conf
   fi
       su -c busybox chroot $CHROOT_DIR "/usr/bin/pacman-key --init"
   if [ "${argslist[3]}" == "manjaro" ]
@@ -186,8 +206,8 @@ fi
       su -c busybox chroot $CHROOT_DIR "/usr/sbin/usermod -aG wheel $USRNAME"
   fi    
 #Set right permissions for hosts	
-  sudo chown 0:0 $CHROOT_DIR/etc/hosts
-  sudo chmod 644 $CHROOT_DIR/etc/hosts
+  su -c chown 0:0 $CHROOT_DIR/etc/hosts
+  su -c chmod 644 $CHROOT_DIR/etc/hosts
 #Check if custom rootfs  has been used as it needs extra steps before continuing
 if [ "${argslist[3]}" == "--custom" ]
 then
@@ -195,7 +215,7 @@ then
 	if [ ! -f $CHROOT_DIR/sbin/useradd ] && [ ! -f $CHROOT_DIR/bin/passwd ]
 	then
 		echo -e "\nCreating an user account is not possible in this rootfs so I can't set it up any further, exiting"
-		sudo umount -l $CHROOT_DIR
+		su -c umount -l $CHROOT_DIR
 		echo "USERNAME=" >> $CONFIG_FILE
 		mark_default
 		exit 
@@ -238,9 +258,9 @@ fi
 
   echo -e "\nFirst setup almost completed, setting up the chroot env"
   
-  sudo mkdir -p $CHROOT_DIR/home/$USRNAME/scripts
-  sudo cp setup/*.sh $CHROOT_DIR/home/$USRNAME/scripts
-  sudo chmod -R a+rwx $CHROOT_DIR/home/$USRNAME/scripts
+  su -c mkdir -p $CHROOT_DIR/home/$USRNAME/scripts
+  su -c cp setup/*.sh $CHROOT_DIR/home/$USRNAME/scripts
+  su -c chmod -R a+rwx $CHROOT_DIR/home/$USRNAME/scripts
 
   
   #Append important env variables to /etc/profile and also modify the main shell to bash                      
@@ -336,35 +356,36 @@ if [ "${argslist[3]}" == "--custom" ]
 then
 	echo -e "\nUsing user selected rootfs"
 	ROOTFS=${argslist[4]}
+	ISCUSTOM=true
 elif [ "${argslist[3]}" == "debian" ]
 then
 	echo -e "\nDownloading debian rootfs"
-	if [ ! -f /sdcard/debian.tar.bz2 ]
+	if [ ! -f /sdcard/$DEBIAN_ROOTFS ]
 	then
 		megadl https://mega.nz/file/cV5ClJrb#h5UvcIdiLq2zFncGYBe3lBL3QjauJFmLupu2faKvFUY --path=/sdcard
 	fi
-	ROOTFS=/sdcard/debian.tar.bz2
+	ROOTFS=/sdcard/$DEBIAN_ROOTFS
 elif [ "${argslist[3]}" == "ubuntu" ]
 then
-	if [ ! -f /sdcard/ubuntu-base-22.04.1-base-arm64.tar.gz ]
+	if [ ! -f /sdcard/$UBUNTU_ROOTFS ]
 	then
-		wget http://cdimage.ubuntu.com/ubuntu-base/releases/jammy/release/ubuntu-base-22.04.1-base-arm64.tar.gz -P /sdcard
+		wget http://cdimage.ubuntu.com/ubuntu-base/releases/jammy/release/$UBUNTU_ROOTFS -P /sdcard
 	fi
-	ROOTFS=/sdcard/ubuntu-base-22.04.1-base-arm64.tar.gz
+	ROOTFS=/sdcard/$UBUNTU_ROOTFS
 elif [ "${argslist[3]}" == "manjaro" ]
 then
-	if [ ! -f /sdcard/Manjaro-ARM-aarch64-latest.tar.gz ]
+	if [ ! -f /sdcard/$MANJARO_ROOTFS ]
     then
-         wget https://github.com/manjaro-arm/rootfs/releases/download/20230220/Manjaro-ARM-aarch64-latest.tar.gz -P /sdcard
+         wget https://github.com/manjaro-arm/rootfs/releases/download/20230220/$MANJARO_ROOTFS -P /sdcard
     fi
-    ROOTFS=/sdcard/Manjaro-ARM-aarch64-latest.tar.gz
+    ROOTFS=/sdcard/$MANJARO_ROOTFS
 elif [ "${argslist[3]}" == "arch" ]
 then
-	if [ ! -f /sdcard/ArchLinuxARM-aarch64-latest.tar.gz ]
+	if [ ! -f /sdcard/$ARCH_ROOTFS ]
 	then
-		wget http://os.archlinuxarm.org/os/ArchLinuxARM-aarch64-latest.tar.gz -P /sdcard
+		wget http://os.archlinuxarm.org/os/$ARCH_ROOTFS -P /sdcard
 	fi
-	ROOTFS=/sdcard/ArchLinuxARM-aarch64-latest.tar.gz		 
+	ROOTFS=/sdcard/$ARCH_ROOTFS		 
 else
 	echo -e "No valid distro or rootfs specified, exiting"
 	exit
@@ -374,8 +395,8 @@ fi
 echo -e "\nInitialization installation of the rootfs\n"
 
 
-sudo mkdir -p $CHROOT_DIR
-sudo chown 755 $CHROOT_DIR
+su -c mkdir -p $CHROOT_DIR
+su -c chown 755 $CHROOT_DIR
 mkdir -p $CONFIG_DIR
 touch $CONFIG_FILE
 read -p "Select an installation method: " INSMETHOD
@@ -394,20 +415,20 @@ echo -e "\nMounting the container"
 
 if findmnt $CHROOT_DIR >/dev/null
 then
-	sudo umount -l $CHROOT_DIR
+	su -c umount -l $CHROOT_DIR
 fi
 #verify installation method then mount it based on it
 if [ "$INSMETHOD" == "file" ] 
 then
-	sudo mount -o loop $INSPATH $CHROOT_DIR
+	su -c busybox mount -o loop $INSPATH $CHROOT_DIR
 else
 #for folder method mount bind it in another directory so we can remount it with proper permissions
-	sudo mount --bind $INSPATH $CHROOT_DIR
-	sudo mount -o remount,bind,suid,exec $CHROOT_DIR
+	su -c busybox mount --bind $INSPATH $CHROOT_DIR
+	su -c busybox mount -o remount,bind,suid,exec $CHROOT_DIR
 fi 
 for i in dev proc sys dev/pts dev/tty
 do
-	sudo busybox mount --bind /$i $CHROOT_DIR/$i
+	su -c busybox mount --bind /$i $CHROOT_DIR/$i
 done
 
 first_setup
@@ -424,17 +445,23 @@ done
 #check if -b option is present
  for i in ${argslist[@]}
  do
-	if [ "$i" == "-b" ]  &&	[ "$NOTDEBIAN" == "false" ]
-  	then
-        echo -e "\nInstalling wine,box86,box64\n"        
-        su -c busybox chroot $CHROOT_DIR /usr/bin/sudo -u $USRNAME -i "bash -c /home/$USRNAME/scripts/install_box.sh"
+	if [ "$i" == "-b" ]
+  	then #if manjaro or arch installation, installbonly box64
+  		if [ "${argslist[3]}" == "manjaro" ] || [ "${argslist[3]}" == "arch" ]
+  		then
+        	echo -e "\nInstalling wine,box64\n"        
+         	su -c busybox chroot $CHROOT_DIR /usr/bin/sudo -u $USRNAME -i "source /home/$USRNAME/scripts/install_box_arch.sh"
+		else
+        	echo -e "\nInstalling wine,box86,box64\n"        
+        	su -c busybox chroot $CHROOT_DIR /usr/bin/sudo -u $USRNAME -i "bash -c /home/$USRNAME/scripts/install_box.sh"
+		fi
 		#check if kernel has binfmt_misc support and in case install right dependencies 
 		  if [ -d /proc/sys/fs/binfmt_misc ]
 		  then
-          		sudo busybox mount --bind /proc/sys/fs/binfmt_misc $CHROOT_DIR/proc/sys/fs/binfmt_misc
+          		su -c busybox mount --bind /proc/sys/fs/binfmt_misc $CHROOT_DIR/proc/sys/fs/binfmt_misc
           		echo -e "\nInstalling binfmt entries"
           		su -c busybox chroot $CHROOT_DIR /usr/bin/sudo -u root -i "apt install binfmt-support -y"
-          		sudo cp binfmt-confs/box86 binfmt-confs/box64  $CHROOT_DIR/usr/share/binfmts
+          		su -c cp binfmt-confs/box86 binfmt-confs/box64  $CHROOT_DIR/usr/share/binfmts
           		su -c busybox chroot $CHROOT_DIR /usr/bin/sudo -u root -i "update-binfmts --import"
           fi
 
@@ -444,7 +471,7 @@ done
 
 echo -e "\nFirst setup completed, stopping the chroot"
 
-sudo umount -l $CHROOT_DIR
+su -c umount -l $CHROOT_DIR
 
 echo -e "\nCopying the chroot-launcher and chroot-installer scripts to $PATH"
 
@@ -467,11 +494,11 @@ do
 		then
 			INSPATH=$(cat $CONFIG_FILE | awk -F '=' '/INSPATH/{print $2}')
 			echo -e "Unmounting any running container"
-			sudo umount -l $CHROOT_DIR >/dev/null 2>&1
-			sudo umount -l $CHROOT_DIR/media/* 2>&1
+			su -c umount -l $CHROOT_DIR >/dev/null 2>&1
+			su -c umount -l $CHROOT_DIR/media/* 2>&1
 			echo -e "Deleting the selected container"
-			sudo rm -rf $INSPATH
-			sudo rm -rf $CONFIG_FILE
+			su -c rm -rf $INSPATH
+			su -c rm -rf $CONFIG_FILE
 		else
 			printf "The container %s doesn't exist, please specify a valid container\n" "$i"
 		fi
@@ -522,7 +549,7 @@ printf "\n%-s%23s\n" "Available distros:" "Status:"
 echo -e "\nDebian 11 Bullseye                $debianstatus"
 echo -e "Ubuntu 22.04 JammyFish            $ubuntustatus"
 echo -e "Manjaro ARM64                     $manjarostatus"
-echo -e "Arch ARM64                        $archstatus"
+echo -e "Arch                              $archstatus"
 
 }
 
@@ -599,7 +626,7 @@ fi
 if [ "$(findmnt -o FS-OPTIONS /data | awk -F "," '{print $1}' | tail -n 1)" == "ro" ]
 then
 	echo -e "\nData partition is mounted as read-only, trying to mount it as rw but depending on the phone's manufacturer this operation may fail"
-	sudo busybox mount -o rw,remount /data
+	su -c busybox mount -o rw,remount /data
 	if [ "$(findmnt -o FS-OPTIONS /data | awk -F "," '{print $1}' | tail -n 1)" == "ro" ]
 	then
 		echo -e "\nOperation failed, exiting"

@@ -1,32 +1,56 @@
 #!/bin/bash
 
-VERSION=7.5
-ARCH=amd64
+#Variables
 
+
+VERSION=7.5
+WINEARCH=amd64
+ARCH=$(uname -m)
+OPMODES=$(lscpu | grep  "CPU op-mode" | awk -F ":" '{print $2}')
 
 echo -e "Installing required dependencies dependencies"
 
 sudo pacman -S base-devel git cmake python3 --needed --noconfirm
 
-echo -e "Installing box64"
-
-if ! ls -l /usr/local/bin/box64 | grep box64
+if [ "$ARCH" == "aarch64" ] || [ "$OPMODES" == "32-bit, 64-bit" ]
 then
-	git clone https://github.com/ptitSeb/box64.git
-	cd box64
-	mkdir build
-	cd build
-	cmake .. -DRPI4ARM64=1 -DCMAKE_BUILD_TYPE=RelWithDebInfo
-	make -j$(nproc --all)
-	sudo make install
-	cd ~
+	echo -e "Installing box64"
+
+	if ! ls -l /usr/local/bin/box64 | grep box64
+	then
+		git clone https://github.com/ptitSeb/box64.git
+		cd box64
+		mkdir build
+		cd build
+		cmake .. -DRPI4ARM64=1 -DCMAKE_BUILD_TYPE=RelWithDebInfo
+		make -j$(nproc --all)
+		sudo make install
+		cd ~
+		sudo ln -f /usr/local/bin/box64 /usr/bin/box64
+	fi
+else
+	if ! ls -l /usr/local/bin/box86 | grep box86
+	then
+		git clone https://github.com/ptitSeb/box86
+		cd box86
+		mkdir build
+		cd build
+		cmake .. -DRPI4=1 -DCMAKE_BUILD_TYPE=RelWithDebInfo 
+		make -j4
+		sudo make install
+		cd ~
+		sudo ln -f /usr/local/bin/box86 /usr/bin/box86
+	fi
 fi
 
-echo -e "Installing wine64 and wine"
 
-wget https://github.com/Kron4ek/Wine-Builds/releases/download/$VERSION/wine-$VERSION-$ARCH.tar.xz
-tar -xvf wine-$VERSION-$ARCH.tar.xz
-mv wine-$VERSION-$ARCH wine64
+
+
+echo -e "Installing wine"
+
+wget https://github.com/Kron4ek/Wine-Builds/releases/download/$VERSION/wine-$VERSION-$WINEARCH.tar.xz
+tar -xvf wine-$VERSION-$WINEARCH.tar.xz
+mv wine-$VERSION-$WINEARCH wine64
 
 echo "export PATH=$PATH:~/wine64/bin" >> $HOME/.bashrc
 
@@ -45,5 +69,5 @@ sudo chmod +x /usr/bin/winetricks
 
 echo -e "Cleaning up"
 
-sudo rm -rf *.tar.gz box64
+sudo rm -rf *.tar.xz box64
 
