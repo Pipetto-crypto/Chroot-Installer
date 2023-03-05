@@ -49,7 +49,7 @@ xwayland(){
 echo "Creating the socket"
 
 su -c mkdir -p $CHROOT_DIR/tmp/runtime-$USERNAME
-su -c busybox chroot $CHROOT_DIR "su - root -c 'chown $USERNAME:$USERNAME /tmp/runtime-$USERNAME'"
+su -c busybox chroot $CHROOT_DIR "/bin/su - root -c 'chown $USERNAME:$USERNAME /tmp/runtime-$USERNAME'"
 taskset -c 4-7 termux-x11 &  
 sleep 7
 su -c touch $CHROOT_DIR/tmp/runtime-$USERNAME/wayland-0
@@ -276,7 +276,7 @@ fi
 	then
 		su -c busybox mount --bind /proc/sys/fs/binfmt_misc $CHROOT_DIR/proc/sys/fs/binfmt_misc
 		echo -e "\nLoading binfmts entries"
-		su -c busybox chroot $CHROOT_DIR "su - root -c 'update-binfmts --enable'"
+		su -c busybox chroot $CHROOT_DIR "/bin/su - root -c 'update-binfmts --enable'"
 	else 
 		echo -e "\nBinfmt support not detected or missing binfmt-support package, skipping loading of binfmt entries"
 	fi

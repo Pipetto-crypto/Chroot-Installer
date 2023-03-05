@@ -53,7 +53,6 @@ mv scripts/bash_x86 $HOME/box_bash
 
 echo -e "\nInstalling winetricks"
 
-wget https://raw.githubusercontent.com/Pipetto-crypto/Chroot-Docs/main/box-wine/winetricks
 sudo mv scripts/winetricks /usr/bin
 sudo chmod +x /usr/bin/winetricks
 
