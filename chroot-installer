@@ -271,7 +271,7 @@ fi
 
   
   #Append important env variables to /etc/profile and also modify the main shell to bash                      
-  su -c busybox chroot $CHROOT_DIR "/bin/su - root -c "bash -c /home/$USRNAME/scripts/setup_env.sh""
+  su -c busybox chroot $CHROOT_DIR "/bin/su - root -c 'bash -c /home/$USRNAME/scripts/setup_env.sh'"
   #Mark the newly created container as default
   mark_default
   
@@ -287,42 +287,42 @@ if [ "$DE" == "xfce" ]
 then
 	if [ "$PACKAGEMANAGER" == "apt" ]
 	then
-		su -c busybox chroot $CHROOT_DIR /usr/bin/sudo -u root -i "apt install tigervnc-standalone-server tigervnc-common dbus-x11 tigervnc-xorg-extension xfce4 xfce4-goodies -y"
+		su -c busybox chroot $CHROOT_DIR '/bin/su - root -c "apt install tigervnc-standalone-server tigervnc-common dbus-x11 tigervnc-xorg-extension xfce4 xfce4-goodies -y"'
 	elif [ "$PACKAGEMANAGER" == "pacman" ]
 	then
-		su -c busybox chroot $CHROOT_DIR /usr/bin/sudo -u root -i "pacman -S --noconfirm tigervnc dbus xfce4 xfce4-goodies"
+		su -c busybox chroot $CHROOT_DIR '/bin/su - root -c "pacman -S --noconfirm tigervnc dbus xfce4 xfce4-goodies"'
 	fi
 elif [ "$DE" == "lxqt" ]
 then
 	if [ "$PACKAGEMANAGER" == "apt" ]
 	then
-		su -c busybox chroot $CHROOT_DIR /usr/bin/sudo -u root -i "apt install tigervnc-standalone-server tigervnc-common dbus-x11 tigervnc-xorg-extension lxqt -y"
+		su -c busybox chroot $CHROOT_DIR '/bin/su - root -c "apt install tigervnc-standalone-server tigervnc-common dbus-x11 tigervnc-xorg-extension lxqt -y"'
 	elif [ "$PACKAGEMANAGER" == "pacman" ]
 	then
-		su -c busybox chroot $CHROOT_DIR /usr/bin/sudo -u root -i "pacman -S --noconfirm tigervnc dbus lxqt"
+		su -c busybox chroot $CHROOT_DIR '/bin/su - root -c "pacman -S --noconfirm tigervnc dbus lxqt"'
 	fi
 elif [ "$DE" == "icewm" ]
 then
 	if [ "$PACKAGEMANAGER" == "apt" ]
 	then
-		su -c busybox chroot $CHROOT_DIR /usr/bin/sudo -u root -i "apt install tigervnc-standalone-server tigervnc-common dbus-x11 tigervnc-xorg-extension icewm -y"
+		su -c busybox chroot $CHROOT_DIR '/bin/su - root -c "apt install tigervnc-standalone-server tigervnc-common dbus-x11 tigervnc-xorg-extension icewm -y"'
 	elif [ "$PACKAGEMANAGER" == "pacman" ]
 	then
-		su -c busybox chroot $CHROOT_DIR /usr/bin/sudo -u root -i "pacman -S --noconfirm tigervnc dbus icewm xorg-fonts-misc xterm"
+		su -c busybox chroot $CHROOT_DIR '/bin/su - root -c "pacman -S --noconfirm tigervnc dbus icewm xorg-fonts-misc xterm"'
 	fi
 elif [ "$DE" == "fluxbox" ]
 then
 	 if [ "$PACKAGEMANAGER" == "apt" ]
 	 then
-	      su -c busybox chroot $CHROOT_DIR /usr/bin/sudo -u root -i "apt install tigervnc-standalone-server tigervnc-common dbus-x11 tigervnc-xorg-extension fluxbox xterm -y"
+	      su -c busybox chroot $CHROOT_DIR '/bin/su - root -c "apt install tigervnc-standalone-server tigervnc-common dbus-x11 tigervnc-xorg-extension fluxbox xterm -y"'
 	  elif [ "$PACKAGEMANAGER" == "pacman" ]
 	  then
-	      su -c busybox chroot $CHROOT_DIR /usr/bin/sudo -u root -i "pacman -S --noconfirm tigervnc dbus fluxbox xterm"
+	      su -c busybox chroot $CHROOT_DIR '/bin/su - root -c "pacman -S --noconfirm tigervnc dbus fluxbox xterm"'
 	fi
 fi
 
 	
-su -c busybox chroot $CHROOT_DIR /usr/bin/sudo -u $USRNAME -i "bash -c /home/$USRNAME/scripts/install_vnc.sh"	
+su -c busybox chroot $CHROOT_DIR "/bin/su - $USRNAME -c 'bash -c /home/$USRNAME/scripts/install_vnc.sh'"
 	
 }
 
@@ -481,19 +481,19 @@ done
   		if [ "${argslist[3]}" == "manjaro" ] || [ "${argslist[3]}" == "arch" ]
   		then
         	echo -e "\nInstalling wine,box64\n"        
-         	su -c busybox chroot $CHROOT_DIR /usr/bin/sudo -u $USRNAME -i "source /home/$USRNAME/scripts/install_box_arch.sh"
+         	su -c busybox chroot $CHROOT_DIR "su - $USRNAME -c 'source /home/$USRNAME/scripts/install_box_arch.sh'"
 		else
         	echo -e "\nInstalling wine,box86,box64\n"        
-        	su -c busybox chroot $CHROOT_DIR /usr/bin/sudo -u $USRNAME -i "bash -c /home/$USRNAME/scripts/install_box.sh"
+        	su -c busybox chroot $CHROOT_DIR "su - $USRNAME -c 'bash -c /home/$USRNAME/scripts/install_box.sh'"
 		fi
 		#check if kernel has binfmt_misc support and in case install right dependencies 
-		  if [ -d /proc/sys/fs/binfmt_misc ]
+		  if [ -d /proc/sys/fs/binfmt_misc ] 
 		  then
           		su -c busybox mount --bind /proc/sys/fs/binfmt_misc $CHROOT_DIR/proc/sys/fs/binfmt_misc
           		echo -e "\nInstalling binfmt entries"
-          		su -c busybox chroot $CHROOT_DIR /usr/bin/sudo -u root -i "apt install binfmt-support -y"
+          		su -c busybox chroot $CHROOT_DIR "su - root -c 'apt install binfmt-support -y'"
           		su -c cp $INITIAL_CONFIGS_DIR/box86 $INITIAL_CONFIGS_DIR/box64  $CHROOT_DIR/usr/share/binfmts
-          		su -c busybox chroot $CHROOT_DIR /usr/bin/sudo -u root -i "update-binfmts --import"
+          		su -c busybox chroot $CHROOT_DIR "su - root -c 'update-binfmts --import'"
           fi
 
 	 fi
