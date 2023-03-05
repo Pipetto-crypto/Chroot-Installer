@@ -289,7 +289,7 @@ fi
 	
 	echo -e "\nAll preparations completed, connecting now\n"
 	#check if login binary is available else default to an alternative method to access the chroot
-	if ls $CHROOT_DIR/bin | grep -q login
+	if su -c ls $CHROOT_DIR/bin | grep -q login
 	then
 		#We check if config exists, if it doesn't it means a custom rootfs has been used
 		if [ "$CONFIG" == "" ]
@@ -307,7 +307,7 @@ fi
 	fi
 else
 	echo -e "Chroot already mounted, logging in"
-	if ls $CHROOT_DIR/bin | grep -q login
+	if su -c ls $CHROOT_DIR/bin | grep -q login
 	then
 		su -c busybox chroot $CHROOT_DIR /bin/login -f $USERNAME
 	else

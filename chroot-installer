@@ -232,7 +232,7 @@ then
 fi
 #Create a password for the user account, the root account, create Android specific groups
   su -c busybox chroot $CHROOT_DIR "/usr/bin/echo 'localhost' > $CHROOT_DIR/etc/hostname"
-  if [ "${argslist[3]}" == "ubuntu" ] || [ "${argslist[3]}" == "ubuntu" ] || [ "${argslist[3]}" == "--custom" ]
+  if [ "${argslist[3]}" == "ubuntu" ] || [ "${argslist[3]}" == "debian" ] || [ "${argslist[3]}" == "--custom" ]
   then
   	  su -c busybox chroot $CHROOT_DIR "/usr/sbin/useradd --create-home $USRNAME"
   fi
@@ -359,13 +359,14 @@ echo -e "#           $RED CHROOT-INSTALLER v0.1$WHITE           #"
 echo    "#                                            #"
 echo    "**********************************************"
 
-#update necessary setup files
-update_setup
 
 #create the various config directories if they don't exist
 mkdir -p $CONFIG_DIR
 mkdir -p $CONTAINERS_DIR
 mkdir -p $CACHED_ROOTFS_DIR
+
+#update necessary setup files
+update_setup
 
 #check if the container is valid and in case ask if the user wants to recreate it
 if [ -f $CONFIG_FILE ]
