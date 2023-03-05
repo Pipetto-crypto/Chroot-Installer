@@ -129,18 +129,25 @@ start(){
 
 containerslist=$(list-containers)
 
-if [ -f $LAST_ARGUMENT  ] || [ -d $LAST_ARGUMENT ] #check if last argument was a file or a directory
+#check if a container is already running and so start it
+if [ -f "$CONFIG_DIR/running.txt" ]
+then
+    runningcontainer=$(cat $CONFIG_DIR/running.txt)
+    if [ -f $runningcontainer ] || [ -d $runningcontainer ]
+    then
+        ISRUNNING=true
+    else
+        CONFIG=$CONTAINERS_DIR/$runningcontainer.conf
+        USERNAME=$(cat $CONFIG | awk -F '='  '/USERNAME/{print $2}')
+        INSPATH=$(cat $CONFIG | awk -F '=' '/INSPATH/{print $2}')
+        ISRUNNING=true
+    fi
+
+elif [ -f $LAST_ARGUMENT  ] || [ -d $LAST_ARGUMENT ] #check if last argument was a file or a directory
 then
 	INSPATH=$LAST_ARGUMENT
-	read -p "What's the username associated with this container: " USERNAME
-
-#check if a container is already running and so start it
-elif [ ! "$(cat $CONFIG_DIR/running.txt)" == "" ]
-then
-	runningcontainer=$(cat $CONFIG_DIR/running.txt)
-	CONFIG=$CONTAINERS_DIR/$runningcontainer.conf
-	USERNAME=$(cat $CONFIG | awk -F '='  '/USERNAME/{print $2}')
-	ISRUNNING=true
+	USERNAME=""
+	CONFIG=""
 
 #check if last argument was start or restart or -w option to know if you didn't provide any container argument
 elif ! check_parameters "$containerslist" "${argslist[*]}"
@@ -194,27 +201,9 @@ else
 	fi
 fi
 
-#check that the container provided is valid and in case exit
-if [ "$INSPATH" == "" ]
-then
-	echo -e "This container seems to be damaged, exiting for safety"
-	exit
-fi
-
 if [ "$USERNAME" == "" ]
 then
       USERNAME=root
-fi
-
-if [ -f $INSPATH ]
-then
-    INSMETHOD="file"
-elif [ -d $INSPATH ]
-then
-	INSMETHOD="folder"
-else
-	echo -e "The container installation path doesn't seem to exist so I can't launch it, exiting"
-	exit
 fi
 
 
@@ -226,6 +215,24 @@ fi
 
  if [ "$ISRUNNING" == "false" ]
  then      
+ 	#check that the container provided is valid and in case exit
+ 	if [ "$INSPATH" == "" ]
+ 	then
+ 	    echo -e "This container seems to be damaged, exiting for safety"
+ 	    exit
+ 	fi
+
+	if [ -f $INSPATH ]
+	then
+	    INSMETHOD="file"
+	elif [ -d $INSPATH ]
+	then
+	    INSMETHOD="folder"
+	else
+	    echo -e "The container installation path doesn't seem to exist so I can't start it.Exiting"
+	    exit
+	fi
+ 	
 	#Start audio in the chroot
 	echo -e "\nInitializing the audio server"
 		pulseaudio --start --exit-idle-time=-1
@@ -284,9 +291,17 @@ fi
 	#check if login binary is available else default to an alternative method to access the chroot
 	if ls $CHROOT_DIR/bin | grep -q login
 	then
-		runningcontainer=$(get_container $CONFIG)
-		echo "$runningcontainer" > $CONFIG_DIR/running.txt
-		su -c busybox chroot $CHROOT_DIR /bin/login -f $USERNAME
+		#We check if config exists, if it doesn't it means a custom rootfs has been used
+		if [ "$CONFIG" == "" ]
+		then
+			runningcontainer=$INSPATH
+			echo "$runningcontainer" > $CONFIG_DIR/running.txt
+			su -c busybox chroot $CHROOT_DIR /bin/login -f $USERNAME
+		else
+			runningcontainer=$(get_container $CONFIG)
+			echo "$runningcontainer" > $CONFIG_DIR/running.txt
+			su -c busybox chroot $CHROOT_DIR /bin/login -f $USERNAME
+		fi
 	else
 	    su -c busybox chroot $CHROOT_DIR /bin/sh
 	fi
@@ -305,15 +320,11 @@ fi
 #function to stop the chroot
 stop(){
 
-#kill Xwayland and all the processes in the chroot
-su -c pkill -9 Xwayland
-runningcontainer=$(cat $CONFIG_DIR/running.txt)
-CONFIG=$CONTAINERS_DIR/$runningcontainer.conf
-USERNAME=$(cat $CONFIG | awk -F '='  '/USERNAME/{print $2}')
-su -c busybox chroot $CHROOT_DIR /usr/bin/pkill -9 -u $USERNAME
-rm -rf $CONFIG_DIR/running.txt
 if findmnt $CHROOT_DIR >/dev/null
 then
+	#kill Xwayland and all the processes in the chroot
+	su -c pkill -9 Xwayland
+	rm -rf $CONFIG_DIR/running.txt
     su -c umount -l $CHROOT_DIR
 else
 	echo -e "\nNo container seems to be mounted, exiting"

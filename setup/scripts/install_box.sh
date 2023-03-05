@@ -22,7 +22,7 @@ sudo ln /usr/local/bin/box86 /usr/bin/box86
 
 fi
 
-if [ "$ARCH" == "aarch64" ] || [ "$OPMODES" == "32-bit, 64-bit" ]
+if [ "$ARCH" == "aarch64" ] || [ "$(echo $OPMODES)" == "32-bit, 64-bit" ]
 then
 
 echo -e "\nInstalling box64"
@@ -45,21 +45,18 @@ echo "export PATH=$PATH:~/wine/bin" >> $HOME/.bashrc
 
 echo -e "\nInstalling bash_x86 and bash_x64"
 
-wget https://github.com/Pipetto-crypto/Chroot-Docs/raw/main/box-wine/bash_x64
-wget https://github.com/Pipetto-crypto/Chroot-Docs/raw/main/box-wine/bash_x86
 mkdir -p $HOME/box_bash
-sudo chmod +x bash_x64 bash_x86
-mv bash_x64 $HOME/box_bash
-mv bash_x86 $HOME/box_bash
+sudo chmod +x scripts/bash_x64 scripts/bash_x86
+mv scripts/bash_x64 $HOME/box_bash
+mv scripts/bash_x86 $HOME/box_bash
 
 
 echo -e "\nInstalling winetricks"
 
 wget https://raw.githubusercontent.com/Pipetto-crypto/Chroot-Docs/main/box-wine/winetricks
-sudo mv winetricks /usr/bin
+sudo mv scripts/winetricks /usr/bin
 sudo chmod +x /usr/bin/winetricks
 
 echo -e "\nCleaning up"
 
-sudo rm -rf *.tar.xz
-
+sudo rm -rf *.tar.xz scripts

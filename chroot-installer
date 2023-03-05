@@ -9,7 +9,13 @@ WHITE="\e[0m"
 #Variables
 
 CHROOT_DIR=/data/local/mnt
-CONTAINERS_DIR=~/.chroot_installer/containers
+CONFIG_DIR=~/.chroot_installer
+SETUP_DIR=$CONFIG_DIR/setup
+SCRIPTS_DIR=$SETUP_DIR/scripts
+INITIAL_CONFIGS_DIR=$SETUP_DIR/configs
+BOX_CONFIGS_DIR=$SETUP_DIR/boxconfigs
+CONTAINERS_DIR=$CONFIG_DIR/containers
+CACHED_ROOTFS_DIR=$CONFIG_DIR/cachedrootfses
 ANDROIDVERSION=$(getprop ro.build.version.release | cut -f1,2 -d '.')
 ROOTFS_DIR=~/installed-rootfs
 #this for cycle put all arguments into array argslist
@@ -90,13 +96,13 @@ make_image(){
     FILENAME="$(basename $ROOTFS)"
     case "$FILENAME" in
     *.tar.bz2)
-              su -c tar --skip-old-files -xjf $ROOTFS -C $CHROOT_DIR
+              su -c busybox tar -kxjf $ROOTFS -C $CHROOT_DIR
               ;;
     *.tar.gz)
-			su -c tar --skip-old-files -xzf $ROOTFS -C $CHROOT_DIR
+			su -c busybox tar -kxzf $ROOTFS -C $CHROOT_DIR
             ;;
      *.tar.xz)
-     		su -c tar xvfp $ROOTFS -C $CHROOT_DIR
+     		su -c busybox tar -kxfp $ROOTFS -C $CHROOT_DIR
 
     esac
     su -c umount -l $CHROOT_DIR
@@ -120,7 +126,7 @@ make_folder(){
     su -c busybox tar -kxzf $ROOTFS -C $INSPATH
     ;;
     *.tar.xz)
-    su -c busybox tar -xfp $ROOTFS -C $INSPATH
+    su -c busybox tar -kxfp $ROOTFS -C $INSPATH
    esac
   echo "INSPATH=$INSPATH" > $CONFIG_FILE
 	
@@ -170,11 +176,11 @@ fi
   read -p "Input an username: " USRNAME
 #Copy hostname and hosts in the chroot
   su -c rm -rf $CHROOT_DIR/etc/resolv.conf
-  su -c cp setup/resolv.conf $CHROOT_DIR/etc
+  su -c cp $INITIAL_CONFIGS_DIR/resolv.conf $CHROOT_DIR/etc
   su -c chmod 644 $CHROOT_DIR/etc/resolv.conf
-  su -c cp setup/hosts $CHROOT_DIR/etc
+  su -c cp $INITIAL_CONFIGS_DIR/hosts $CHROOT_DIR/etc
 #Copy sudoers in the chroot
-  su -c cp setup/sudoers $CHROOT_DIR/etc/sudoers
+  su -c cp $INITIAL_CONFIGS_DIR/sudoers $CHROOT_DIR/etc/sudoers
   su -c chmod 440 $CHROOT_DIR/etc/sudoers
 
 #Additional setup required for Manjaro
@@ -183,9 +189,9 @@ fi
 #Copy custom pacman.conf to chroot with disabled signature checking
   if [ "${argslist[3]}" == "manjaro" ]
   then
-      su -c cp setup/pacman.conf $CHROOT_DIR/etc
+      su -c cp $INITIAL_CONFIGS_DIR/pacman.conf $CHROOT_DIR/etc
   else
-      su -c cp setup/pacman-arch.conf $CHROOT_DIR/etc/pacman.conf
+      su -c cp $INITIAL_CONFIGS_DIR/pacman-arch.conf $CHROOT_DIR/etc/pacman.conf
   fi
       su -c busybox chroot $CHROOT_DIR "/usr/bin/pacman-key --init"
   if [ "${argslist[3]}" == "manjaro" ]
@@ -223,7 +229,7 @@ then
 	fi	
 fi
 #Create a password for the user account, the root account, create Android specific groups
-  su -c busybox chroot /data/local/mnt "/usr/bin/echo 'localhost' > $CHROOT_DIR/etc/hostname"
+  su -c busybox chroot $CHROOT_DIR "/usr/bin/echo 'localhost' > $CHROOT_DIR/etc/hostname"
   if [ "${argslist[3]}" == "ubuntu" ] || [ "${argslist[3]}" == "ubuntu" ] || [ "${argslist[3]}" == "--custom" ]
   then
   	  su -c busybox chroot $CHROOT_DIR "/usr/sbin/useradd --create-home $USRNAME"
@@ -260,7 +266,7 @@ fi
   echo -e "\nFirst setup almost completed, setting up the chroot env"
   
   su -c mkdir -p $CHROOT_DIR/home/$USRNAME/scripts
-  su -c cp setup/*.sh $CHROOT_DIR/home/$USRNAME/scripts
+  su -c cp $SCRIPTS_DIR/* $BOX_CONFIGS_DIR/* $CHROOT_DIR/home/$USRNAME/scripts
   su -c chmod -R a+rwx $CHROOT_DIR/home/$USRNAME/scripts
 
   
@@ -320,6 +326,23 @@ su -c busybox chroot $CHROOT_DIR /usr/bin/sudo -u $USRNAME -i "bash -c /home/$US
 	
 }
 
+#function that update all setup files
+update_setup(){
+
+if [ -d ~/Chroot-Installer ]
+then
+	git -C ~/Chroot-Installer pull
+	rm -rf $SETUP_DIR
+	cp -r ~/Chroot-Installer/setup $CONFIG_DIR
+else
+	git clone https://github.com/Pipetto-crypto/Chroot-Installer.git ~/Chroot-Installer
+	rm -rf $SETUP_DIR
+	cp -r ~/Chroot-Installer/setup $CONFIG_DIR
+fi
+
+	
+}
+
 install(){
 
 echo -e "$RED""\nWARNING: THIS SCRIPT IS UNTESTED ON ANDROID VERSIONS NEWER THAN 10, SO IT MAY NOT WORK. ISSUES ABOUT NOT WORKING ON NEWER ANDROID VERSIONS WILL ONLY BE ACCEPTED WHEN PROPER LOGS ARE PROVIDED""$WHITE"
@@ -333,6 +356,14 @@ echo    "#                                            #"
 echo -e "#           $RED CHROOT-INSTALLER v0.1$WHITE           #"
 echo    "#                                            #"
 echo    "**********************************************"
+
+#update necessary setup files
+update_setup
+
+#create the various config directories if they don't exist
+mkdir -p $CONFIG_DIR
+mkdir -p $CONTAINERS_DIR
+mkdir -p $CACHED_ROOTFS_DIR
 
 #check if the container is valid and in case ask if the user wants to recreate it
 if [ -f $CONFIG_FILE ]
@@ -361,32 +392,32 @@ then
 elif [ "${argslist[3]}" == "debian" ]
 then
 	echo -e "\nDownloading debian rootfs"
-	if [ ! -f /sdcard/$DEBIAN_ROOTFS ]
+	if [ ! -f $CACHED_ROOTFS_DIR/$DEBIAN_ROOTFS ]
 	then
-		megadl https://mega.nz/file/cV5ClJrb#h5UvcIdiLq2zFncGYBe3lBL3QjauJFmLupu2faKvFUY --path=/sdcard
+		megadl https://mega.nz/file/cV5ClJrb#h5UvcIdiLq2zFncGYBe3lBL3QjauJFmLupu2faKvFUY --path=$CACHED_ROOTFS_DIR
 	fi
-	ROOTFS=/sdcard/$DEBIAN_ROOTFS
+	ROOTFS=$CACHED_ROOTFS_DIR/$DEBIAN_ROOTFS
 elif [ "${argslist[3]}" == "ubuntu" ]
 then
-	if [ ! -f /sdcard/$UBUNTU_ROOTFS ]
+	if [ ! -f $CACHED_ROOTFS_DIR/$UBUNTU_ROOTFS ]
 	then
-		wget http://cdimage.ubuntu.com/ubuntu-base/releases/jammy/release/$UBUNTU_ROOTFS -P /sdcard
+		wget http://cdimage.ubuntu.com/ubuntu-base/releases/jammy/release/$UBUNTU_ROOTFS -P $CACHED_ROOTFS_DIR
 	fi
-	ROOTFS=/sdcard/$UBUNTU_ROOTFS
+	ROOTFS=$CACHED_ROOTFS_DIR/$UBUNTU_ROOTFS
 elif [ "${argslist[3]}" == "manjaro" ]
 then
-	if [ ! -f /sdcard/$MANJARO_ROOTFS ]
+	if [ ! -f $CACHED_ROOTFS_DIR/$MANJARO_ROOTFS ]
     then
-         wget https://github.com/manjaro-arm/rootfs/releases/download/20230220/$MANJARO_ROOTFS -P /sdcard
+         wget https://github.com/manjaro-arm/rootfs/releases/download/20230220/$MANJARO_ROOTFS -P $CACHED_ROOTFS_DIR
     fi
-    ROOTFS=/sdcard/$MANJARO_ROOTFS
+    ROOTFS=$CACHED_ROOTFS_DIR/$MANJARO_ROOTFS
 elif [ "${argslist[3]}" == "arch" ]
 then
-	if [ ! -f /sdcard/$ARCH_ROOTFS ]
+	if [ ! -f $CACHED_ROOTFS_DIR/$ARCH_ROOTFS ]
 	then
-		wget http://os.archlinuxarm.org/os/$ARCH_ROOTFS -P /sdcard
+		wget http://os.archlinuxarm.org/os/$ARCH_ROOTFS -P $CACHED_ROOTFS_DIR
 	fi
-	ROOTFS=/sdcard/$ARCH_ROOTFS		 
+	ROOTFS=$CACHED_ROOTFS_DIR/$ARCH_ROOTFS		 
 else
 	echo -e "No valid distro or rootfs specified, exiting"
 	exit
@@ -398,7 +429,6 @@ echo -e "\nInitialization installation of the rootfs\n"
 
 su -c mkdir -p $CHROOT_DIR
 su -c chown 755 $CHROOT_DIR
-mkdir -p $CONTAINERS_DIR
 touch $CONFIG_FILE
 read -p "Select an installation method: " INSMETHOD
 
@@ -462,7 +492,7 @@ done
           		su -c busybox mount --bind /proc/sys/fs/binfmt_misc $CHROOT_DIR/proc/sys/fs/binfmt_misc
           		echo -e "\nInstalling binfmt entries"
           		su -c busybox chroot $CHROOT_DIR /usr/bin/sudo -u root -i "apt install binfmt-support -y"
-          		su -c cp binfmt-confs/box86 binfmt-confs/box64  $CHROOT_DIR/usr/share/binfmts
+          		su -c cp $INITIAL_CONFIGS_DIR/box86 $INITIAL_CONFIGS_DIR/box64  $CHROOT_DIR/usr/share/binfmts
           		su -c busybox chroot $CHROOT_DIR /usr/bin/sudo -u root -i "update-binfmts --import"
           fi
 
@@ -476,7 +506,7 @@ su -c umount -l $CHROOT_DIR
 
 echo -e "\nCopying the chroot-launcher and chroot-installer scripts to $PATH"
 
-cp setup/chroot-launcher $PATH
+cp chroot-launcher $PATH
 cp chroot-installer $PATH
 chmod +x $PATH/chroot-launcher $PATH/chroot-installer
 

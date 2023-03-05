@@ -56,18 +56,17 @@ echo "export PATH=$PATH:~/wine64/bin" >> $HOME/.bashrc
 
 echo -e "Installing bash_x86 and bash_x64"
 
-wget https://github.com/Pipetto-crypto/Chroot-Docs/raw/main/box-wine/bash_x64 
 mkdir -p $HOME/box_bash
-sudo chmod +x bash_x64
-mv bash_x64 $HOME/box_bash
+sudo chmod +x scripts/bash_x64
+mv scripts/bash_x64 $HOME/box_bash
 
 echo -e "Installing winetricks"
 
-wget https://raw.githubusercontent.com/Pipetto-crypto/Chroot-Docs/main/box-wine/winetricks
-sudo mv winetricks /usr/bin
+sudo mv scripts/winetricks /usr/bin
 sudo chmod +x /usr/bin/winetricks
 
 echo -e "Cleaning up"
 
-sudo rm -rf *.tar.xz box64
+sudo rm -rf *.tar.xz box64 scripts
+
 
