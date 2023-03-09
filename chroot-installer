@@ -273,7 +273,7 @@ fi
 
   
   #Append important env variables to /etc/profile and also modify the main shell to bash                      
-  su -c busybox chroot $CHROOT_DIR "/bin/su - root -c 'bash -c /home/$USRNAME/scripts/setup_env.sh'"
+  su -c busybox chroot $CHROOT_DIR "/bin/su - $USRNAME -c 'bash -c /home/$USRNAME/scripts/setup_env.sh'"
   #Mark the newly created container as default
   mark_default
   
