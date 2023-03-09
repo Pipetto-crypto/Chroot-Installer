@@ -340,7 +340,8 @@ else
 	git clone https://github.com/Pipetto-crypto/Chroot-Installer.git ~/Chroot-Installer
 	rm -rf $SETUP_DIR
 	cp -r ~/Chroot-Installer/setup $CONFIG_DIR
-fi
+	cp ~/Chroot-Installer/chroot-launcher ~/Chroot-Installer/chroot-installer $SETUP_DIR
+fi 
 
 	
 }
@@ -509,8 +510,8 @@ su -c umount -l $CHROOT_DIR
 
 echo -e "\nCopying the chroot-launcher and chroot-installer scripts to $PATH"
 
-cp chroot-launcher $PATH
-cp chroot-installer $PATH
+cp $SETUP_DIR/chroot-launcher $PATH
+cp $SETUP_DIR/chroot-installer $PATH
 chmod +x $PATH/chroot-launcher $PATH/chroot-installer
 
 }
