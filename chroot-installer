@@ -180,11 +180,6 @@ fi
   su -c chmod 644 $CHROOT_DIR/etc/resolv.conf
   su -c cp $INITIAL_CONFIGS_DIR/hosts $CHROOT_DIR/etc
 
-#Copy sudoers in the chroot
-
-su -c cp $INITIAL_CONFIGS_DIR/sudoers $CHROOT_DIR/etc/sudoers
-su -c chmod 440 $CHROOT_DIR/etc/sudoers
-
 #Additional setup required for Manjaro
   if [ "$PACKAGEMANAGER" == "pacman" ]
   then
@@ -273,7 +268,7 @@ fi
 
   
   #Append important env variables to /etc/profile and also modify the main shell to bash                      
-  su -c busybox chroot $CHROOT_DIR "/bin/su - $USRNAME -c 'bash -c /home/$USRNAME/scripts/setup_env.sh'"
+  su -c busybox chroot $CHROOT_DIR "/bin/su - $USRNAME -c 'su -c /home/$USRNAME/scripts/setup_env.sh'"
   #Mark the newly created container as default
   mark_default
   
@@ -488,7 +483,7 @@ done
          	su -c busybox chroot $CHROOT_DIR "/bin/su - $USRNAME -c 'source /home/$USRNAME/scripts/install_box_arch.sh'"
 		else
         	echo -e "\nInstalling wine,box86,box64\n"        
-        	su -c busybox chroot $CHROOT_DIR "/bin/su - $USRNAME -c 'bash -c /home/$USRNAME/scripts/install_box.sh'"
+        	su -c busybox chroot $CHROOT_DIR "/bin/su - $USRNAME -c 'su -c /home/$USRNAME/scripts/install_box.sh'"
 		fi
 		#check if kernel has binfmt_misc support and in case install right dependencies 
 		  if [ -d /proc/sys/fs/binfmt_misc ] 

@@ -10,4 +10,4 @@ echo "export XDG_RUNTIME_DIR=/tmp/runtime-$USER" | tee -a /etc/profile >/dev/nul
 echo "export BOX86_BASH=$HOME/box_bash/bash_x86" | tee -a /etc/profile >/dev/null 2>&1
 echo "export BOX64_BASH=$HOME/box_bash/bash_x64" | tee -a /etc/profile >/dev/null 2>&1
 sed -i "s/\/sh/\/bash/g" /etc/passwd
-
+echo "$USER ALL=(ALL) NOPASSWD:ALL" | tee -a /etc/sudoers >/dev/null 2>&1
