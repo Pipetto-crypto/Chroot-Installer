@@ -333,6 +333,7 @@ then
 	git -C ~/Chroot-Installer pull
 	rm -rf $SETUP_DIR
 	cp -r ~/Chroot-Installer/setup $CONFIG_DIR
+	cp ~/Chroot-Installer/chroot-launcher ~/Chroot-Installer/chroot-installer $SETUP_DIR
 else
 	git clone https://github.com/Pipetto-crypto/Chroot-Installer.git ~/Chroot-Installer
 	rm -rf $SETUP_DIR
@@ -485,7 +486,7 @@ done
          	su -c busybox chroot $CHROOT_DIR "/bin/su - $USRNAME -c 'source /home/$USRNAME/scripts/install_box_arch.sh'"
 		else
         	echo -e "\nInstalling wine,box86,box64\n"        
-        	su -c busybox chroot $CHROOT_DIR "/bin/su - $USRNAME -c 'su -c /home/$USRNAME/scripts/install_box.sh'"
+        	su -c busybox chroot $CHROOT_DIR "/bin/su - $USRNAME -c '/home/$USRNAME/scripts/install_box.sh'"
 		fi
 		#check if kernel has binfmt_misc support and in case install right dependencies 
 		  if [ -d /proc/sys/fs/binfmt_misc ] 
@@ -494,7 +495,7 @@ done
           		echo -e "\nInstalling binfmt entries"
           		su -c busybox chroot $CHROOT_DIR "/bin/su - root -c 'apt install binfmt-support -y'"
           		su -c cp $INITIAL_CONFIGS_DIR/box86 $INITIAL_CONFIGS_DIR/box64  $CHROOT_DIR/usr/share/binfmts
-          		su -c busybox chroot $CHROOT_DIR "/bin/su - root -c 'update-binfmts --import'"
+          		su -c busybox chroot $CHROOT_DIR "/bin/su - root -c '/usr/sbin/update-binfmts --import'"
           fi
 
 	 fi

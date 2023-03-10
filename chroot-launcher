@@ -279,7 +279,7 @@ fi
 	then
 		su -c busybox mount --bind /proc/sys/fs/binfmt_misc $CHROOT_DIR/proc/sys/fs/binfmt_misc
 		echo -e "\nLoading binfmts entries"
-		su -c busybox chroot $CHROOT_DIR "/bin/su - root -c 'update-binfmts --enable'"
+		su -c busybox chroot $CHROOT_DIR "/bin/su - root -c '/usr/sbin/update-binfmts --enable'"
 	else 
 		echo -e "\nBinfmt support not detected or missing binfmt-support package, skipping loading of binfmt entries"
 	fi

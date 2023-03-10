@@ -13,7 +13,7 @@ echo -e "\nInstalling box86"
 sudo dpkg --add-architecture armhf
 sudo apt update
 sudo apt install zenity:armhf libasound*:armhf libstdc++6:armhf mesa*:armhf -y
-sudo dpkg -i ~/scripts/box86_0.2.8_armhf.deb
+PATH=$PATH:/usr/local/sbin:/usr/sbin:/sbin sudo dpkg -i ~/scripts/box86_0.2.8_armhf.deb
 
 fi
 
@@ -23,7 +23,7 @@ then
 echo -e "\nInstalling box64"
 
 sudo apt install mesa* zenity* gcc-multilib-x86-64-linux-gnu -y
-sudo dpkg -i box64_0.2.0_arm64.deb
+PATH=$PATH:/usr/local/sbin:/usr/sbin:/sbin sudo dpkg -i ~/scripts/box64_0.2.0_arm64.deb
 
 fi
 
