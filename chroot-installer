@@ -168,7 +168,9 @@ fi
 #Check that the user didn't select a custom rootfs and in case write the installed distro in the config file
 if [ ! "${argslist[3]}" == "--custom" ]
 then
-  echo "DISTRO=${argslist[3]}" >> $CONFIG_FILE
+    echo "DISTRO=${argslist[3]}" >> $CONFIG_FILE
+else
+	echo "DISTRO=other" >> $CONFIG_FILE
 fi
 #Ask the user to create an username then write it in the config file
 

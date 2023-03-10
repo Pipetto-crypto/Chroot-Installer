@@ -44,15 +44,36 @@ fi
 
 #This function contains the commands required to start a Xwayland server which the chroot can connect to.
 
+edit-config(){
+
+if [ ! -f $CONTAINERS_DIR/$LAST_ARGUMENT.conf ]
+then
+	echo "No valid container has been provided, leaving now"
+	exit
+fi
+
+if [ "${argslist[2]}" == "--mark-default" ]
+then
+	mark-default
+elif [ "${argslist[2]}" == "--set-username" ]
+then
+	sed -i "3s/=.*/=${argslist[3]}/g" $CONTAINERS_DIR/$LAST_ARGUMENT.conf
+elif [ "${argslist[2]}" == "--set-path" ]
+then
+	sed -i "1s|=.*|=${argslist[3]}|g" $CONTAINERS_DIR/$LAST_ARGUMENT.conf
+fi
+	
+}
+
 xwayland(){
 
 echo "Creating the socket"
 
 su -c mkdir -p $CHROOT_DIR/tmp/runtime-$USERNAME
 su -c busybox chroot $CHROOT_DIR "/bin/su - root -c 'chown $USERNAME:$USERNAME /tmp/runtime-$USERNAME'"
-taskset -c 4-7 termux-x11 -listen tcp :0.0 &  
+taskset -c 4-7 termux-x11 --no-xwayland-start -listen tcp :0.0 &  
 sleep 7
-DISPLAY=:0.0 xhost + 
+Xvfb :0 -ac -listen tcp :0.0 -screen 0 4096x4096x24 &
 
 }
 
@@ -151,7 +172,6 @@ then
 elif ! check_parameters "$containerslist" "${argslist[*]}"
 then
 
-	echo -e "The container you provided doesn't exist or you didn't provide any container, attempting to start the default one"
 	if (( $(ls -1 $CONTAINERS_DIR | wc -l ) == 1 )) #check the number of available containers and if there is only one start it
 	then
 		CONFIG="$CONTAINERS_DIR/*"
@@ -179,24 +199,9 @@ then
 	fi		
 #try to start the container provided by container argument		
 else
-	CONTAINEREXIST=false
-	for i in $containerslist
-	do   #check if the container argument provided is in the container list
-		if [ "$LAST_ARGUMENT" == "$i" ] 
-		then
-			CONTAINEREXIST=true
-		fi
-	done 
-	if [ "$CONTAINEREXIST" == "true" ] 
-	then
-		CONFIG="$CONTAINERS_DIR/$LAST_ARGUMENT.conf"
-		USERNAME=$(cat $CONFIG | awk -F '='  '/USERNAME/{print $2}')
-		INSPATH=$(cat $CONFIG | awk -F '=' '/INSPATH/{print $2}')
-	#check if the container exists and in case exit
-	else
-	    echo -e "The container you provided doesn't exist, exiting"
-	    exit
-	fi
+	CONFIG="$CONTAINERS_DIR/$LAST_ARGUMENT.conf"
+	USERNAME=$(cat $CONFIG | awk -F '='  '/USERNAME/{print $2}')
+	INSPATH=$(cat $CONFIG | awk -F '=' '/INSPATH/{print $2}')
 fi
 
 if [ "$USERNAME" == "" ]
@@ -372,15 +377,15 @@ echo -e "\nfilepath          path to the rootfs that the script should try to la
 while [ True ];
 do
 	
-	if [ "${argslist[1]}" = "stop" ]
+	if [ "${argslist[1]}" == "stop" ]
 	then
 		stop
 		break
-	elif [ "${argslist[1]}" = "start" ]
+	elif [ "${argslist[1]}" == "start" ]
     then
     	start 
 		break
-	elif [ "${argslist[1]}" = "restart" ]
+	elif [ "${argslist[1]}" == "restart" ]
 	then
 		stop
 		start
@@ -397,11 +402,15 @@ do
 	then
 		mark-default
 		break
-	elif [ "${argslist[1]}" = "help" ]
+	elif [ "${argslist[1]}" == "help" ]
 	then
 		help
 		break
-    else 
+	elif [ "${argslist[1]}" == "edit-conf" ]
+	then
+		edit-config
+		break
+    else  
 		echo -e "\nNo option specified\n"
 		help
         break

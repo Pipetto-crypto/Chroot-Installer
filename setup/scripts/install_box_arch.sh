@@ -22,7 +22,7 @@ then
 		cd box64
 		mkdir build
 		cd build
-		cmake .. -DRPI4ARM64=1 -DCMAKE_BUILD_TYPE=RelWithDebInfo
+		cmake .. -DRPI4ARM64=1 -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBAD_SIGNAL=ON
 		make -j4
 		sudo make install
 		cd ~
@@ -35,7 +35,7 @@ else
 		cd box86
 		mkdir build
 		cd build
-		cmake .. -DRPI4=1 -DCMAKE_BUILD_TYPE=RelWithDebInfo 
+		cmake .. -DRPI4=1 -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBAD_SIGNAL=ON
 		make -j4
 		sudo make install
 		cd ~
@@ -67,6 +67,6 @@ sudo chmod +x /usr/bin/winetricks
 
 echo -e "Cleaning up"
 
-sudo rm -rf *.tar.xz box64 scripts
+sudo rm -rf *.tar.xz scripts
 
 
