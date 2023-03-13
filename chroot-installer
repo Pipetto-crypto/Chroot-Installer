@@ -79,7 +79,7 @@ make_image(){
 #Unmount any mounted container before making the image
     if findmnt $CHROOT_DIR >/dev/null
     then
-        su -c umount -l $CHROOT_DIR
+        su -c umount -d -l $CHROOT_DIR
     fi
 
 #Make the image only if it doesn't exist or if its size doesn't match the user input one. It disables some features that may not be supported by some older Android kernels as well.
@@ -105,7 +105,7 @@ make_image(){
      		su -c busybox tar -kxfp $ROOTFS -C $CHROOT_DIR
 
     esac
-    su -c umount -l $CHROOT_DIR
+    su -c umount -d -l $CHROOT_DIR
 }
 
 #Function to make a rootfs folder in case it has been chosen by user as installation method
@@ -221,7 +221,7 @@ then
 	if [ ! -f $CHROOT_DIR/sbin/useradd ] && [ ! -f $CHROOT_DIR/bin/passwd ]
 	then
 		echo -e "\nCreating an user account is not possible in this rootfs so I can't set it up any further, exiting"
-		su -c umount -l $CHROOT_DIR
+		su -c umount -d -l $CHROOT_DIR
 		echo "USERNAME=" >> $CONFIG_FILE
 		mark_default
 		exit 
@@ -448,7 +448,7 @@ echo -e "\nMounting the container"
 
 if findmnt $CHROOT_DIR >/dev/null
 then
-	su -c umount -l $CHROOT_DIR
+	su -c umount -d -l $CHROOT_DIR
 fi
 #verify installation method then mount it based on it
 if [ "$INSMETHOD" == "file" ] 
@@ -504,7 +504,7 @@ done
 
 echo -e "\nFirst setup completed, stopping the chroot"
 
-su -c umount -l $CHROOT_DIR
+su -c umount -d -l $CHROOT_DIR
 
 echo -e "\nCopying the chroot-launcher and chroot-installer scripts to $PATH"
 
@@ -527,8 +527,8 @@ do
 		then
 			INSPATH=$(cat $CONFIG_FILE | awk -F '=' '/INSPATH/{print $2}')
 			echo -e "Unmounting any running container"
-			su -c umount -l $CHROOT_DIR >/dev/null 2>&1
-			su -c umount -l $CHROOT_DIR/media/* 2>&1
+			su -c umount -d -l $CHROOT_DIR >/dev/null 2>&1
+			su -c umount -d -l $CHROOT_DIR/media/* 2>&1
 			echo -e "Deleting the selected container"
 			su -c rm -rf $INSPATH
 			su -c rm -rf $CONFIG_FILE

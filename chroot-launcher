@@ -65,16 +65,31 @@ fi
 	
 }
 
-xwayland(){
+xserver(){
 
 echo "Creating the socket"
 
 su -c mkdir -p $CHROOT_DIR/tmp/runtime-$USERNAME
+su -c mkdir -p $CHROOT_DIR/tmp/.X11-unix
+su -c chmod 1777 $CHROOT_DIR/tmp/.X11-unix
+mkdir -p $TMPDIR/.X11-unix
 su -c busybox chroot $CHROOT_DIR "/bin/su - root -c 'chown $USERNAME:$USERNAME /tmp/runtime-$USERNAME'"
-taskset -c 4-7 termux-x11 --no-xwayland-start -listen tcp :0.0 &  
-sleep 7
+taskset -c 4-7 termux-x11 --no-xwayland-start & 
 Xvfb :0 -ac -listen tcp :0.0 -screen 0 4096x4096x24 &
+sleep 7
+su -c busybox mount --bind $CHROOT_DIR/tmp/.X11-unix $TMPDIR/.X11-unix
 
+}
+
+virgl_server(){
+
+echo "Creating the virgl socket"
+MESA_NOERROR=1 virgl_test_server_android --use-egl-surfaceless & >/dev/null 2>&1
+sleep 4
+su -c busybox touch $CHROOT_DIR/tmp/.virgl_test
+su -c busybox mount --bind $TMPDIR/.virgl_test $CHROOT_DIR/tmp/.virgl_test
+su -c chmod a+rwx $CHROOT_DIR/tmp/.virgl_test
+	
 }
 
 #function to update this script
@@ -245,7 +260,7 @@ fi
 #Mount the container based on installation method		
 		if findmnt $CHROOT_DIR >/dev/null
 		then
-		    su -c umount -l $CHROOT_DIR
+		    su -c umount -d -l $CHROOT_DIR
 		fi
 		if [ "$INSMETHOD" == "file" ]
 		then
@@ -285,9 +300,14 @@ fi
 	fi
 	
 	
-	if check_parameters "-w" "${argslist[*]}"
+	if check_parameters "-x" "${argslist[*]}"
 	then
-			xwayland #calls the xwayland function if the -w option is provided
+			xserver #calls the xserver function if the -x option is provided
+	fi
+
+	if check_parameters "-v" "${argslist[*]}"
+	then
+	        virgl_server #calls the xserver function if the -x option
 	fi
 	
 	echo -e "\nAll preparations completed, connecting now\n"
@@ -326,9 +346,10 @@ stop(){
 rm -rf $CONFIG_DIR/running.txt
 if findmnt $CHROOT_DIR >/dev/null
 then
-	#kill Xwayland and all the processes in the chroot
-	su -c pkill -9 Xwayland
-    su -c umount -l $CHROOT_DIR
+	#kill termux-x11 app process
+	su -c kill $(pidof app_process) 
+	su -c kill $(pidof virgl_test_server_android)
+	su -c umount -d -l $CHROOT_DIR
 else
 	echo -e "\nNo container seems to be mounted, exiting"
 fi
@@ -342,7 +363,7 @@ help(){
 
 optscolumn1=(
 "start"
-"-w"
+"-x"
 "stop"
 "restart"
 "update"
@@ -353,7 +374,7 @@ optscolumn1=(
 
 optscolumn2=(
 "launch the container specified by argument containername or chroot into the rootfs specified by argument filepath. If no container or filepath is provided it launches the one marked as default"
-"start a Xwayland server through Termux:X11, to use only with start or restart"
+"start a Xserver server through Termux:X11, to use only with start or restart"
 "stop any running container then exit"
 "restart the container specified by argument containername, takes same options as start"
 "update this launcher script then exit"
