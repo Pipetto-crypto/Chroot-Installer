@@ -30,8 +30,17 @@ PATH=$PATH:/usr/local/sbin:/usr/sbin:/sbin sudo dpkg -i ~/scripts/box64_0.2.2_ar
 
 fi
 
-echo -e "\nInstalling wine"
 
+echo -e "\nSetting env variables"
+
+echo "export BOX86_PATH=~/wine/bin/" | sudo tee -a /etc/profile >/dev/null 2>&1
+echo "export BOX86_LD_LIBRARY_PATH=~/wine/lib/wine/i386-unix/:/lib/i386-linux-gnu:/lib/aarch64-linux-gnu/" | sudo tee -a /etc/profile >/dev/null 2>&1
+echo "export BOX64_PATH=~/wine/bin/" | sudo tee -a /etc/profile >/dev/null 2>&1
+echo "export BOX64_LD_LIBRARY_PATH=~/wine/lib/wine/i386-unix/:~/wine/lib/wine/x86_64-unix/:/lib/i386-linux-gnu/:/lib/x86_64-linux-gnu:/lib/aarch64-linux-gnu:/usr/x86_64-linux-gnu/lib" | sudo tee -a  /etc/profile >/dev/null 2>&1
+echo "export BOX86_BASH=~/box_bash/bash_x86" | sudo tee -a /etc/profile >/dev/null 2>&1
+echo "export BOX64_BASH=~/box_bash/bash_x64" | sudo tee -a /etc/profile >/dev/null 2>&1
+
+echo -e "\nInstalling wine"
 
 
 wget https://github.com/Kron4ek/Wine-Builds/releases/download/$VERSION/wine-$VERSION-$WINEARCH.tar.xz

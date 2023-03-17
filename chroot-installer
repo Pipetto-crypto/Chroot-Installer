@@ -29,7 +29,6 @@ done
 #Create a config file with the same name as the container
 CONFIG_FILE=$CONTAINERS_DIR/${argslist[2]}.conf
 ARCH=$(uname -m)
-ISCUSTOM=false
 
 #Distributions
 
@@ -170,7 +169,7 @@ if [ ! "${argslist[3]}" == "--custom" ]
 then
     echo "DISTRO=${argslist[3]}" >> $CONFIG_FILE
 else
-	echo "DISTRO=other" >> $CONFIG_FILE
+    echo "DISTRO=other" >> $CONFIG_FILE
 fi
 #Ask the user to create an username then write it in the config file
 
@@ -181,96 +180,100 @@ fi
   su -c cp $INITIAL_CONFIGS_DIR/resolv.conf $CHROOT_DIR/etc
   su -c chmod 644 $CHROOT_DIR/etc/resolv.conf
   su -c cp $INITIAL_CONFIGS_DIR/hosts $CHROOT_DIR/etc
-
-#Additional setup required for Manjaro
-  if [ "$PACKAGEMANAGER" == "pacman" ]
-  then
-#Copy custom pacman.conf to chroot with disabled signature checking
-  if [ "${argslist[3]}" == "manjaro" ]
-  then
-      su -c cp $INITIAL_CONFIGS_DIR/pacman.conf $CHROOT_DIR/etc
-  else
-      su -c cp $INITIAL_CONFIGS_DIR/pacman-arch.conf $CHROOT_DIR/etc/pacman.conf
-  fi
-      su -c busybox chroot $CHROOT_DIR "/usr/bin/pacman-key --init"
-  if [ "${argslist[3]}" == "manjaro" ]
-  then    
-      su -c busybox chroot $CHROOT_DIR "/usr/bin/pacman-key --populate archlinux-arm manjaro-arm manjaro"
-      su -c busybox chroot $CHROOT_DIR "/usr/bin/pacman-mirrors -f10"
-  else
-      su -c busybox chroot $CHROOT_DIR "/usr/bin/pacman-key --populate archlinux-arm"
-  fi
-    
-  if [ "${argslist[3]}" == "manjaro" ] 
-  then   
-      su -c busybox chroot $CHROOT_DIR "/usr/bin/pacman -Syyu base manjaro-system manjaro-release --noconfirm"
-  else
-      su -c busybox chroot $CHROOT_DIR "/usr/bin/pacman -Syyu base --noconfirm"
-  fi  
-      su -c busybox chroot $CHROOT_DIR "/usr/sbin/useradd --create-home $USRNAME"
-      su -c busybox chroot $CHROOT_DIR "/usr/sbin/groupadd wheel"
-      su -c busybox chroot $CHROOT_DIR "/usr/sbin/usermod -aG wheel $USRNAME"
-  fi    
-#Set right permissions for hosts	
+#Create a password for the user account, the root account, create Android specific groups                      
+  su -c busybox chroot $CHROOT_DIR "/usr/bin/echo 'localhost' > $CHROOT_DIR/etc/hostname"
+  #Set right permissions for hosts
   su -c chown 0:0 $CHROOT_DIR/etc/hosts
   su -c chmod 644 $CHROOT_DIR/etc/hosts
-#Check if custom rootfs  has been used as it needs extra steps before continuing
-if [ "${argslist[3]}" == "--custom" ]
-then
-#Copy modified etc/group to the chroot, avoid checking for too many binaries
-	if [ ! -f $CHROOT_DIR/sbin/useradd ] && [ ! -f $CHROOT_DIR/bin/passwd ]
-	then
-		echo -e "\nCreating an user account is not possible in this rootfs so I can't set it up any further, exiting"
-		su -c umount -d -l $CHROOT_DIR
-		echo "USERNAME=" >> $CONFIG_FILE
-		mark_default
-		exit 
-	fi	
-fi
-#Create a password for the user account, the root account, create Android specific groups
-  su -c busybox chroot $CHROOT_DIR "/usr/bin/echo 'localhost' > $CHROOT_DIR/etc/hostname"
-  if [ "${argslist[3]}" == "ubuntu" ] || [ "${argslist[3]}" == "debian" ] || [ "${argslist[3]}" == "--custom" ]
+
+
+
+  if [ "${argslist[3]}" == "manjaro" ]
+  then 
+      su -c busybox chroot $CHROOT_DIR "/usr/bin/pacman-key --init"
+      su -c cp $INITIAL_CONFIGS_DIR/pacman.conf $CHROOT_DIR/etc   
+      su -c busybox chroot $CHROOT_DIR "/usr/bin/pacman-key --populate archlinux-arm manjaro-arm manjaro"
+      su -c busybox chroot $CHROOT_DIR "/usr/bin/pacman-mirrors -f10"
+      su -c busybox chroot $CHROOT_DIR "/usr/bin/pacman -Syyu base manjaro-system manjaro-release --noconfirm"
+  
+  elif [  "${argslist[3]}" == "arch" ]
   then
-  	  su -c busybox chroot $CHROOT_DIR "/usr/sbin/useradd --create-home $USRNAME"
+      su -c busybox chroot $CHROOT_DIR "/usr/bin/pacman-key --init"
+      su -c cp $INITIAL_CONFIGS_DIR/pacman-arch.conf $CHROOT_DIR/etc/pacman.conf
+      su -c busybox chroot $CHROOT_DIR "/usr/bin/pacman-key --populate archlinux-arm"
+      su -c busybox chroot $CHROOT_DIR "/usr/bin/pacman -Syyu base --noconfirm"
   fi
-  echo -e "\nUser account created, please insert a password for it: "
-  su -c busybox chroot $CHROOT_DIR "/usr/bin/passwd $USRNAME"
-  echo -e "\nPassword registered, please insert one for your root account as well: "
-  su -c busybox chroot $CHROOT_DIR "/usr/bin/passwd root"
-  su -c busybox chroot $CHROOT_DIR "/usr/sbin/groupadd -g 3001 aid_net_bt_admin"
-  su -c busybox chroot $CHROOT_DIR "/usr/sbin/groupadd -g 3002 aid_net_bt"
-  su -c busybox chroot $CHROOT_DIR "/usr/sbin/groupadd -g 3003 aid_inet"
-  su -c busybox chroot $CHROOT_DIR "/usr/sbin/groupadd -g 3004 aid_net_raw"
-  su -c busybox chroot $CHROOT_DIR "/usr/sbin/groupadd -g 3005 aid_net_admin"
-  su -c busybox chroot $CHROOT_DIR "/usr/sbin/groupadd sudo"
-  su -c busybox chroot $CHROOT_DIR "/usr/sbin/usermod -aG aid_inet,aid_net_raw,aid_net_admin,aid_net_bt,aid_net_bt_admin $USRNAME"
-  su -c busybox chroot $CHROOT_DIR "/usr/sbin/usermod -aG aid_inet,aid_net_raw,aid_net_admin,aid_net_bt,aid_net_bt_admin root"
-  su -c busybox chroot $CHROOT_DIR "/usr/sbin/usermod -aG sudo $USRNAME"
+
+
+  if find /usr/sbin -name groupadd
+  then
+  	  su -c busybox chroot $CHROOT_DIR "/usr/sbin/groupadd -g 3001 aid_net_bt_admin"
+  	  su -c busybox chroot $CHROOT_DIR "/usr/sbin/groupadd -g 3002 aid_net_bt"
+  	  su -c busybox chroot $CHROOT_DIR "/usr/sbin/groupadd -g 3003 aid_inet"
+  	  su -c busybox chroot $CHROOT_DIR "/usr/sbin/groupadd -g 3004 aid_net_raw"
+  	  su -c busybox chroot $CHROOT_DIR "/usr/sbin/groupadd -g 3005 aid_net_admin"
+  	  SUCCESS1="true"
+  fi
+
+  if find /usr/sbin -name usermod
+  then
+  	   su -c busybox chroot $CHROOT_DIR "/usr/sbin/usermod -aG aid_inet,aid_net_raw,aid_net_admin,aid_net_bt,aid_net_bt_admin root"
+  	   SUCCESS2="true"
+  fi
+ 
+  if find /usr/bin -name useradd && find /usr/bin --name passwd
+  then
+		su -c busybox chroot $CHROOT_DIR "/usr/sbin/useradd --create-home $USRNAME"
+		echo -e "\nUser account created, please insert a password for it: "
+        su -c busybox chroot $CHROOT_DIR "/usr/bin/passwd $USRNAME"
+        echo -e "\nPassword registered, please insert one for your root account as well: "
+		su -c busybox chroot $CHROOT_DIR "/usr/bin/passwd root"
+		if [ "$SUCCESS1" == "true" ] && [ "$SUCCESS2" == "true" ]
+		then
+			su -c busybox chroot $CHROOT_DIR "/usr/sbin/usermod -aG aid_inet,aid_net_raw,aid_net_admin,aid_net_bt,aid_net_bt_admin $USRNAME"
+			if [ "${argslist[3]}" == "manjaro" ]
+			then
+				su -c busybox chroot $CHROOT_DIR "/usr/sbin/usermod -aG wheel $USRNAME"
+			else
+				su -c busybox chroot $CHROOT_DIR "/usr/sbin/usermod -aG sudo $USRNAME"
+			fi
+     	fi
+  else
+  		USRNAME="root"
+  fi     	  
+
   echo "USERNAME=$USRNAME" >> $CONFIG_FILE
 
-  #Install some required packages
-  if [ "$PACKAGEMANAGER" == "apt" ]
+  
+  if [ "$PACKAGEMANAGER" == "pacman" ]
   then
-  		su -c busybox chroot $CHROOT_DIR "/usr/sbin/usermod -g 3003 _apt"
-		su -c busybox chroot $CHROOT_DIR '/bin/su - root -c "apt update"'
-		su -c busybox chroot $CHROOT_DIR '/bin/su - root -c "apt install sudo wget gnupg2 xvfb -y"'     
-
-  elif [ "$PACKAGEMANAGER" == "pacman" ]
+       su -c busybox chroot $CHROOT_DIR '/bin/su - root -c "pacman -Syu --noconfirm && pacman -S --noconfirm sudo wget gnupg xorg-server-xvfb"'
+  
+  elif [ "$PACKAGEMANAGER" == "apt" ]
   then
-		su -c busybox chroot $CHROOT_DIR '/bin/su - root -c "pacman -Syu --noconfirm"'
-        	su -c busybox chroot $CHROOT_DIR '/bin/su - root -c "pacman -S --noconfirm sudo wget gnupg xvfb"'
+       su -c busybox chroot $CHROOT_DIR "/usr/sbin/usermod -g 3003 _apt"
+       su -c busybox chroot $CHROOT_DIR '/bin/su - root -c "apt update && apt install sudo wget gnupg2 xvfb -y"'
 
   fi
 
-  echo -e "\nFirst setup almost completed, setting up the chroot env"
-  
+  echo -e "\nFirst setup almost completed, copying required installation scripts"
   su -c mkdir -p $CHROOT_DIR/home/$USRNAME/scripts
   su -c cp $SCRIPTS_DIR/* $BOX_CONFIGS_DIR/* $CHROOT_DIR/home/$USRNAME/scripts
   su -c chmod -R a+rwx $CHROOT_DIR/home/$USRNAME/scripts
 
-  
-  #Append important env variables to /etc/profile and also modify the main shell to bash                      
-  su -c busybox chroot $CHROOT_DIR "/bin/su - $USRNAME -c 'su -c /home/$USRNAME/scripts/setup_env.sh'"
+  su -c busybox chroot $CHROOT_DIR "/bin/su - $USRNAME -c '/home/$USRNAME/scripts/setup_env.sh'"
+
+  if [ "${argslist[3]}" == "--custom" ]
+  then
+  	   echo -e "\nInstallation completed, exiting"
+  	   su -c umount -d -l $CHROOT_DIR
+  	   cp $SETUP_DIR/chroot-launcher $PATH
+  	   cp $SETUP_DIR/chroot-installer $PATH
+  	   chmod +x $PATH/chroot-launcher $PATH/chroot-installer
+  	   exit
+  fi
+
+
   #Mark the newly created container as default
   mark_default
   
@@ -390,7 +393,6 @@ if [ "${argslist[3]}" == "--custom" ]
 then
 	echo -e "\nUsing user selected rootfs"
 	ROOTFS=${argslist[4]}
-	ISCUSTOM=true
 elif [ "${argslist[3]}" == "debian" ]
 then
 	echo -e "\nDownloading debian rootfs"
@@ -479,9 +481,9 @@ done
 #check if -b option is present
  for i in ${argslist[@]}
  do
-	if [ "$i" == "-b" ] && [ "$ISCUSTOM" == "false" ]
+	if [ "$i" == "-b" ]
   	then #if manjaro or arch installation, installbonly box64
-  		if [ "${argslist[3]}" == "manjaro" ] || [ "${argslist[3]}" == "arch" ]
+  		if [ "$PACKAGEMANAGER" == "pacman" ]
   		then
         	echo -e "\nInstalling wine,box64\n"        
          	su -c busybox chroot $CHROOT_DIR "/bin/su - $USRNAME -c 'source /home/$USRNAME/scripts/install_box_arch.sh'"
@@ -490,7 +492,7 @@ done
         	su -c busybox chroot $CHROOT_DIR "/bin/su - $USRNAME -c '/home/$USRNAME/scripts/install_box.sh'"
 		fi
 		#check if kernel has binfmt_misc support and in case install right dependencies 
-		  if [ -d /proc/sys/fs/binfmt_misc ] 
+		  if [ -d /proc/sys/fs/binfmt_misc ] && [ "$PACKAGEMANAGER" == "apt" ]
 		  then
           		su -c busybox mount --bind /proc/sys/fs/binfmt_misc $CHROOT_DIR/proc/sys/fs/binfmt_misc
           		echo -e "\nInstalling binfmt entries"
