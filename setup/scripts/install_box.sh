@@ -4,6 +4,9 @@
 
 ARCH=$(uname -m)
 OPMODES=$(lscpu | grep  "CPU op-mode" | awk -F ":" '{print $2}')
+VERSION=7.5
+WINEARCH=amd64
+
 
 if [ "$ARCH" == "armv7l" ] || [ "$ARCH" == "armv8l" ] || [ "$ARCH" == "aarch64" ]
 then
@@ -29,14 +32,13 @@ fi
 
 echo -e "\nInstalling wine"
 
-mkdir -p $HOME/wine
-mkdir -p $HOME/wine64
-wget http://www.playonlinux.com/wine/binaries/phoenicis/upstream-linux-x86/PlayOnLinux-wine-7.0-rc1-upstream-linux-x86.tar.gz
-wget http://www.playonlinux.com/wine/binaries/phoenicis/upstream-linux-amd64/PlayOnLinux-wine-6.14-upstream-linux-amd64.tar.gz
-tar -xzvf PlayOnLinux-wine-7.0-rc1-upstream-linux-x86.tar.gz -C wine
-tar -xzvf PlayOnLinux-wine-6.14-upstream-linux-amd64.tar.gz -C wine64
+
+
+wget https://github.com/Kron4ek/Wine-Builds/releases/download/$VERSION/wine-$VERSION-$WINEARCH.tar.xz
+tar -xvf wine-$VERSION-$WINEARCH.tar.xz
+mv wine-$VERSION-$WINEARCH wine
 echo "alias win32='WINEPREFIX=~/.wine32 WINEARCH=win32'" >> $HOME/.bashrc
-echo "export PATH=$PATH:~/wine/bin:~/wine64/bin" >> $HOME/.bashrc
+echo "export PATH=$PATH:~/wine/bin:~/wine/bin" >> $HOME/.bashrc
 
 
 echo -e "\nInstalling bash_x86 and bash_x64"

@@ -347,8 +347,10 @@ rm -rf $CONFIG_DIR/running.txt
 if findmnt $CHROOT_DIR >/dev/null
 then
 	#kill termux-x11 app process
-	su -c kill $(pidof app_process) 
-	su -c kill $(pidof virgl_test_server_android)
+	PID1=$(pidof app_process)
+	PID2=$(pidof virgl_test_server_android)
+	if [ "$PID1" != "" ];then su -c kill $(pidof app_process);fi
+	if [ "$PID2" != "" ];then su -c kill $(pidof virgl_test_server_android);fi
 	su -c umount -d -l $CHROOT_DIR
 else
 	echo -e "\nNo container seems to be mounted, exiting"

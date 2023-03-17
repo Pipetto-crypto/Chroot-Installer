@@ -253,12 +253,12 @@ fi
   then
   		su -c busybox chroot $CHROOT_DIR "/usr/sbin/usermod -g 3003 _apt"
 		su -c busybox chroot $CHROOT_DIR '/bin/su - root -c "apt update"'
-		su -c busybox chroot $CHROOT_DIR '/bin/su - root -c "apt install sudo wget gnupg2 xwayland -y"'     
+		su -c busybox chroot $CHROOT_DIR '/bin/su - root -c "apt install sudo wget gnupg2 xvfb -y"'     
 
   elif [ "$PACKAGEMANAGER" == "pacman" ]
   then
 		su -c busybox chroot $CHROOT_DIR '/bin/su - root -c "pacman -Syu --noconfirm"'
-        su -c busybox chroot $CHROOT_DIR '/bin/su - root -c "pacman -S --noconfirm sudo wget gnupg"'
+        	su -c busybox chroot $CHROOT_DIR '/bin/su - root -c "pacman -S --noconfirm sudo wget gnupg xvfb"'
 
   fi
 
@@ -432,6 +432,7 @@ echo -e "\nInitialization installation of the rootfs\n"
 su -c mkdir -p $CHROOT_DIR
 su -c chown 755 $CHROOT_DIR
 touch $CONFIG_FILE
+
 read -p "Select an installation method: " INSMETHOD
 
 
