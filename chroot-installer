@@ -78,7 +78,7 @@ fi
 
 if [ "${argslist[2]}" == "--mark-default" ]
 then
-	mark-default
+	mark_default
 elif [ "${argslist[2]}" == "--set-username" ]
 then
 	sed -i "3s/=.*/=${argslist[3]}/g" $CONTAINERS_DIR/$LAST_ARGUMENT.conf
@@ -129,6 +129,37 @@ done
 	
 }
 
+#from a config file, return the container name belonging to it
+get_container(){
+	
+strippedconfig=$(basename -- $1)
+echo "${strippedconfig%.*}"
+	
+}
+
+check_parameters(){
+
+exitcode=1
+
+for i in $1
+do
+	position=1
+	for e in $2
+	do
+		if [ "$i" == "$e" ]
+		then
+			exitcode=0
+			break 2
+		fi
+	position=$((position+1))
+	done
+done
+
+return $exitcode
+
+}
+
+
 
 #function that start the chroot
 start(){
@@ -156,7 +187,7 @@ then
         ISRUNNING=true
     else
         CONFIG=$CONTAINERS_DIR/$runningcontainer.conf
-        USERNAME=$(cat $CONFIG | awk -F '='  '/USERNAME/{print $2}')
+        USRNAME=$(cat $CONFIG | awk -F '='  '/USERNAME/{print $2}')
         INSPATH=$(cat $CONFIG | awk -F '=' '/INSPATH/{print $2}')
         ISRUNNING=true
     fi
@@ -164,7 +195,7 @@ then
 elif [ -f $LAST_ARGUMENT  ] || [ -d $LAST_ARGUMENT ] #check if last argument was a file or a directory
 then
 	INSPATH=$LAST_ARGUMENT
-	USERNAME=""
+	USRNAME=""
 	CONFIG=""
 
 #check if last argument was start or restart or -w option to know if you didn't provide any container argument
@@ -174,7 +205,7 @@ then
 	if (( $(ls -1 $CONTAINERS_DIR | wc -l ) == 1 )) #check the number of available containers and if there is only one start it
 	then
 		CONFIG="$CONTAINERS_DIR/*"
-		USERNAME=$(cat $CONFIG | awk -F '='  '/USERNAME/{print $2}')
+		USRNAME=$(cat $CONFIG | awk -F '='  '/USERNAME/{print $2}')
 		INSPATH=$(cat $CONFIG | awk -F '=' '/INSPATH/{print $2}')
 		
 	else  #if there are more than one container start the default
@@ -186,7 +217,7 @@ then
 			then
 				DEFAULTFOUND=true
 				CONFIG="$i"
-				USERNAME=$(cat $CONFIG | awk -F '='  '/USERNAME/{print $2}')
+				USRNAME=$(cat $CONFIG | awk -F '='  '/USERNAME/{print $2}')
 				INSPATH=$(cat $CONFIG | awk -F '=' '/INSPATH/{print $2}')
 			fi
 		done
@@ -199,20 +230,20 @@ then
 #try to start the container provided by container argument		
 else
 	CONFIG="$CONTAINERS_DIR/$LAST_ARGUMENT.conf"
-	USERNAME=$(cat $CONFIG | awk -F '='  '/USERNAME/{print $2}')
+	USRNAME=$(cat $CONFIG | awk -F '='  '/USERNAME/{print $2}')
 	INSPATH=$(cat $CONFIG | awk -F '=' '/INSPATH/{print $2}')
 fi
 
 if [ "$USRNAME" == "" ]
 then
-      USERNAME=root
+      USRNAME=root
 fi
 
 
 #check if user has prompted for a custom username
 if check_parameters "-u" "${argslist[*]}"
 then
-	USERNAME=${argslist[$((position+1))]}
+	USRNAME=${argslist[$((position+1))]}
 fi
 
  if [ "$ISRUNNING" == "false" ]
@@ -661,7 +692,7 @@ update_setup
 #check if the container is valid and in case ask if the user wants to recreate it
 if [ -f $CONFIG_FILE ]
 then
-    USERNAME=$(cat $CONFIG_FILE | awk -F '='  '/USERNAME/{print $2}')
+    USRNAME=$(cat $CONFIG_FILE | awk -F '='  '/USERNAME/{print $2}')
     INSPATH=$(cat $CONFIG_FILE | awk -F '=' '/INSPATH/{print $2}')
     if [ "$USRNAME" == "" ] || [ "$INSPATH" == "" ]
     then
@@ -996,7 +1027,6 @@ do
 	then
 		edit-config
 		break
-    else  
 	elif [ "${argslist[1]}" == "update" ]
 	then
 		update
