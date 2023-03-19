@@ -205,7 +205,7 @@ fi
   fi
 
 
-  if find /usr/sbin -name groupadd
+  if find $CHROOT_DIR/usr/sbin -name groupadd 1>/dev/null 2>&1
   then
   	  su -c busybox chroot $CHROOT_DIR "/usr/sbin/groupadd -g 3001 aid_net_bt_admin"
   	  su -c busybox chroot $CHROOT_DIR "/usr/sbin/groupadd -g 3002 aid_net_bt"
@@ -215,13 +215,13 @@ fi
   	  SUCCESS1="true"
   fi
 
-  if find /usr/sbin -name usermod
+  if find $CHROOT_DIR/usr/sbin -name usermod 1>/dev/null 2>&1
   then
   	   su -c busybox chroot $CHROOT_DIR "/usr/sbin/usermod -aG aid_inet,aid_net_raw,aid_net_admin,aid_net_bt,aid_net_bt_admin root"
   	   SUCCESS2="true"
   fi
  
-  if find /usr/bin -name useradd && find /usr/bin --name passwd
+  if find $CHROOT_DIR/usr/bin -name useradd 1>/dev/null 2>&1 && find $CHROOT_DIR/usr/bin -name passwd 1>/dev/null 2>&1
   then
 		su -c busybox chroot $CHROOT_DIR "/usr/sbin/useradd --create-home $USRNAME"
 		echo -e "\nUser account created, please insert a password for it: "
@@ -324,7 +324,7 @@ then
 fi
 
 	
-su -c busybox chroot $CHROOT_DIR "/bin/su - $USRNAME -c 'bash -c /home/$USRNAME/scripts/install_vnc.sh'"
+su -c busybox chroot $CHROOT_DIR "/bin/su - $USRNAME -c '/home/$USRNAME/scripts/install_vnc.sh'"
 	
 }
 

@@ -75,7 +75,6 @@ su -c chmod 1777 $CHROOT_DIR/tmp/.X11-unix
 mkdir -p $TMPDIR/.X11-unix
 su -c busybox chroot $CHROOT_DIR "/bin/su - root -c 'chown $USERNAME:$USERNAME /tmp/runtime-$USERNAME'"
 taskset -c 4-7 termux-x11 --no-xwayland-start & 
-Xvfb :0 -ac -listen tcp :0.0 -screen 0 4096x4096x24 &
 sleep 7
 su -c busybox mount --bind $CHROOT_DIR/tmp/.X11-unix $TMPDIR/.X11-unix
 
