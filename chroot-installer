@@ -98,11 +98,11 @@ echo "Creating the socket"
 su -c mkdir -p $CHROOT_DIR/tmp/runtime-$USRNAME
 su -c mkdir -p $CHROOT_DIR/tmp/.X11-unix
 su -c chmod 1777 $CHROOT_DIR/tmp/.X11-unix
-mkdir -p $TMPDIR/.X11-unix
 su -c busybox chroot $CHROOT_DIR "/bin/su - root -c 'chown $USRNAME:$USRNAME /tmp/runtime-$USRNAME'"
-DISPLAY=:0 TMPDIR=$CHROOT_DIR/tmp su -c "taskset -c 4-7 /data/data/com.termux/files/usr/bin/termux-x11 &" 
+sudo chown  $(id -u):$(id -u) $CHROOT_DIR/tmp
+DISPLAY=:0 TMPDIR=$CHROOT_DIR/tmp taskset -c 4-7 termux-x11 & 
 sleep 4
-su -c busybox mount --bind $CHROOT_DIR/tmp/.X11-unix $TMPDIR/.X11-unix
+sudo chown root:root $CHROOT_DIR/tmp
 
 }
 
