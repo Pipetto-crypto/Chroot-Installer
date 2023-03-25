@@ -16,6 +16,7 @@ INTERNAL_STORAGE=/sdcard
 SCRIPTS_DIR=$SETUP_DIR/scripts
 INITIAL_CONFIGS_DIR=$SETUP_DIR/configs
 BOX_CONFIGS_DIR=$SETUP_DIR/boxconfigs
+EXTRA_CONFIGS_DIR=$SETUP_DIR/extraconfigs
 CONTAINERS_DIR=$CONFIG_DIR/containers
 CACHED_ROOTFS_DIR=$CONFIG_DIR/cachedrootfses
 ANDROIDVERSION=$(getprop ro.build.version.release | cut -f1,2 -d '.')
@@ -99,8 +100,8 @@ su -c mkdir -p $CHROOT_DIR/tmp/.X11-unix
 su -c chmod 1777 $CHROOT_DIR/tmp/.X11-unix
 mkdir -p $TMPDIR/.X11-unix
 su -c busybox chroot $CHROOT_DIR "/bin/su - root -c 'chown $USRNAME:$USRNAME /tmp/runtime-$USRNAME'"
-taskset -c 4-7 termux-x11 --no-xwayland-start & 
-sleep 7
+DISPLAY=:0 TMPDIR=$CHROOT_DIR/tmp su -c "taskset -c 4-7 /data/data/com.termux/files/usr/bin/termux-x11 &" 
+sleep 4
 su -c busybox mount --bind $CHROOT_DIR/tmp/.X11-unix $TMPDIR/.X11-unix
 
 }
@@ -114,6 +115,7 @@ sleep 4
 su -c busybox touch $CHROOT_DIR/tmp/.virgl_test
 su -c busybox mount --bind $TMPDIR/.virgl_test $CHROOT_DIR/tmp/.virgl_test
 su -c chmod a+rwx $CHROOT_DIR/tmp/.virgl_test
+
 	
 }
 
@@ -544,8 +546,8 @@ fi
   then
 		su -c busybox chroot $CHROOT_DIR "/usr/sbin/useradd --create-home $USRNAME"
 		echo -e "\nUser account created, please insert a password for it: "
-        su -c busybox chroot $CHROOT_DIR "/usr/bin/passwd $USRNAME"
-        echo -e "\nPassword registered, please insert one for your root account as well: "
+                su -c busybox chroot $CHROOT_DIR "/usr/bin/passwd $USRNAME"
+                echo -e "\nPassword registered, please insert one for your root account as well: "
 		su -c busybox chroot $CHROOT_DIR "/usr/bin/passwd root"
 		if [ "$SUCCESS1" == "true" ] && [ "$SUCCESS2" == "true" ]
 		then
@@ -556,7 +558,7 @@ fi
 			else
 				su -c busybox chroot $CHROOT_DIR "/usr/sbin/usermod -aG sudo $USRNAME"
 			fi
-     	fi
+     	        fi
   else
   		USRNAME="root"
   fi     	  
@@ -647,6 +649,7 @@ su -c busybox chroot $CHROOT_DIR "/bin/su - $USRNAME -c '/home/$USRNAME/scripts/
 	
 }
 
+
 #function that update all setup files
 update_setup(){
 
@@ -662,6 +665,24 @@ else
 	cp -r ~/Chroot-Installer/setup $CONFIG_DIR
 	cp ~/Chroot-Installer/chroot-launcher ~/Chroot-Installer/chroot-installer $SETUP_DIR
 fi 
+
+	
+}
+
+
+#Function to implement the installation of additional components
+
+additional_components(){
+
+echo -e "Which of these additional components do you want to install: "
+echo -e "1.Desktop Environment"
+echo -e "2.Box86 and Box64"
+echo -e "3."
+
+
+
+
+
 
 	
 }
@@ -818,7 +839,7 @@ done
           		su -c busybox chroot $CHROOT_DIR "/bin/su - root -c 'apt install binfmt-support -y'"
           		su -c cp $INITIAL_CONFIGS_DIR/box86 $INITIAL_CONFIGS_DIR/box64  $CHROOT_DIR/usr/share/binfmts
           		su -c busybox chroot $CHROOT_DIR "/bin/su - root -c '/usr/sbin/update-binfmts --import'"
-          fi
+                   fi
 
 	 fi
   done
