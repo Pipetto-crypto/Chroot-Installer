@@ -52,8 +52,6 @@ wget https://github.com/Kron4ek/Wine-Builds/releases/download/$VERSION/wine-$VER
 tar -xvf wine-$VERSION-$WINEARCH.tar.xz
 mv wine-$VERSION-$WINEARCH wine$VERSION
 mkdir -p ~/.local/wineprefixes
-echo "export PATH=$PATH:~/wine$VERSION/bin" >> $HOME/.bashrc
-
 
 echo -e "\nInstalling bash_x86 and bash_x64"
 
