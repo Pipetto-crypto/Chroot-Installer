@@ -93,11 +93,17 @@ fi
 #TODO Implement a way to demonize and stop it from the chroot
 xserver(){
 
-echo "Creating the socket"
+echo "Starting X server through Xvfb"
 
-DISPLAY=:0 taskset -c 4-7 termux-x11 & 
+TERMUX_X11=$PATH/termux-x11
+XVFB=$PATH/Xvfb
+XVFB_ARGS=:0 -ac -screen 0 4096x4096x24 -noreset
+TERMUX_X11_PID=$PREFIX/var/run/termux-x11.pid
+XVFB_PID=$PREFIX/var/run/Xvfb.pid
+DISPLAY=:0 start-stop-daemon --quiet --background --make-pidfile --pidfile $TERMUX_X11_PID --start --exec $TERMUX_X11
 sleep 4
-DISPLAY=:0 taskset -c 4-7 Xvfb :0 -ac -screen 0 4096x4096x24 &
+start-stop-daemon --quiet --background --make-pidfile --pidfile $XVFB_PID --start --exec $XVFB -- $XVFB_ARGS
+
 
 }
 
@@ -311,13 +317,13 @@ fi
 		echo -e "\nBinfmt support not detected or missing binfmt-support package, skipping loading of binfmt entries"
 	fi
 
-	echo -e "Mount termux tmp dir and create xdg runtime dir"
+	echo -e "\nMount termux tmp dir and create xdg runtime dir"
 
 	su -c busybox mount --bind $TMPDIR $CHROOT_DIR/tmp                                                        
 	su -c mkdir -p $CHROOT_DIR/tmp/runtime-$USRNAME
 	su -c busybox chroot $CHROOT_DIR "/bin/su - root -c 'chown $USRNAME:$USRNAME /tmp/runtime-$USRNAME'"
-    su -c chown root:root $CHROOT_DIR/tmp
-    su -c chmod 1777 $CHROOT_DIR/tmp
+        su -c chown root:root $CHROOT_DIR/tmp
+        su -c chmod 1777 $CHROOT_DIR/tmp
 
 	
 	if check_parameters "-x" "${argslist[*]}"
@@ -368,11 +374,11 @@ rm -rf $CONFIG_DIR/running.txt
 if findmnt $CHROOT_DIR >/dev/null
 then
 	#kill termux-x11 and virgl processes if they exist
-	if [ "$PID1" != "" ];then su -c kill $(pidof app_process);fi
-	if [ "$PID2" != "" ];then su -c kill $(pidof virgl_test_server_android);fi
-    #set back right permissions for termux tmp dir
-    su -c chown $(id -u):$(id -u) $TMPDIR
-    su -c chmod 700 $TMPDIR
+	if [ -f $TERMUX_X11_PID ];then start-stop-daemon --stop --pidfile $TERMUX_X11_PID && rm -rf $TERMUX_X11_PID;fi
+	if [ -f $XVFB_PID ];then start-stop-daemon --stop --pidfile $XVFB_PID && rm -rf $XVFB_PID;fi
+        #set back right permissions for termux tmp dir
+        su -c chown $(id -u):$(id -u) $TMPDIR
+        su -c chmod 700 $TMPDIR
 	su -c umount -d -l $CHROOT_DIR
 else
 	echo -e "\nNo container seems to be mounted, exiting"
