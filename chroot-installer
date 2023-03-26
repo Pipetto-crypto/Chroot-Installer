@@ -96,13 +96,13 @@ xserver(){
 echo "Starting X server through Xvfb"
 
 TERMUX_X11=$PATH/termux-x11
-XVFB=$PATH/Xvfb
-XVFB_ARGS=:0 -ac -screen 0 4096x4096x24 -noreset
+XVFB=/usr/bin/Xvfb
+XVFB_ARGS=":0 -ac -screen 0 4096x4096x24 -noreset"
 TERMUX_X11_PID=$PREFIX/var/run/termux-x11.pid
-XVFB_PID=$PREFIX/var/run/Xvfb.pid
-DISPLAY=:0 start-stop-daemon --quiet --background --make-pidfile --pidfile $TERMUX_X11_PID --start --exec $TERMUX_X11
+XVFB_PID=/var/run/Xvfb.pid
+DISPLAY=:0 start-stop-daemon --quiet --background --user $(id -u) --make-pidfile --pidfile $TERMUX_X11_PID --start --exec $TERMUX_X11
 sleep 4
-start-stop-daemon --quiet --background --make-pidfile --pidfile $XVFB_PID --start --exec $XVFB -- $XVFB_ARGS
+su -c busybox chroot $CHROOT_DIR "/usr/sbin/start-stop-daemon --quiet --background --make-pidfile --pidfile $XVFB_PID --start --exec $XVFB -- $XVFB_ARGS"
 
 
 }
@@ -373,12 +373,16 @@ stop(){
 rm -rf $CONFIG_DIR/running.txt
 if findmnt $CHROOT_DIR >/dev/null
 then
+    XVFB_PID=$CHROOT_DIR/run/Xvfb.pid
+    TERMUX_X11_PID=$PREFIX/var/run/termux-x11.pid
 	#kill termux-x11 and virgl processes if they exist
-	if [ -f $TERMUX_X11_PID ];then start-stop-daemon --stop --pidfile $TERMUX_X11_PID && rm -rf $TERMUX_X11_PID;fi
-	if [ -f $XVFB_PID ];then start-stop-daemon --stop --pidfile $XVFB_PID && rm -rf $XVFB_PID;fi
-        #set back right permissions for termux tmp dir
-        su -c chown $(id -u):$(id -u) $TMPDIR
-        su -c chmod 700 $TMPDIR
+	if [ -f $TERMUX_X11_PID ];then start-stop-daemon --stop --pidfile $TERMUX_X11_PID;fi
+	if [ -f $XVFB_PID ];then su -c $PATH/start-stop-daemon --stop --pidfile $XVFB_PID;fi
+    #set back right permissions for termux tmp dir
+    rm -rf $TERMUX_X11_PID
+    su -c rm -rf $XVFB_PID
+    su -c chown $(id -u):$(id -u) $TMPDIR
+    su -c chmod 700 $TMPDIR
 	su -c umount -d -l $CHROOT_DIR
 else
 	echo -e "\nNo container seems to be mounted, exiting"
