@@ -93,7 +93,7 @@ fi
 #TODO Implement a way to demonize and stop it from the chroot
 xserver(){
 
-echo "Starting X server through Xvfb"
+echo -e "\nStarting X server through Xvfb"
 
 TERMUX_X11=$PATH/termux-x11
 XVFB=/usr/bin/Xvfb
@@ -110,13 +110,12 @@ su -c busybox chroot $CHROOT_DIR "/usr/sbin/start-stop-daemon --quiet --backgrou
 #TODO Implement a way to demonize and eventually log to file
 virgl_server(){
 
-echo "Creating the virgl socket"
-MESA_NOERROR=1 virgl_test_server_android --use-egl-surfaceless & >/dev/null 2>&1
-sleep 4
-su -c busybox touch $CHROOT_DIR/tmp/.virgl_test
-su -c busybox mount --bind $TMPDIR/.virgl_test $CHROOT_DIR/tmp/.virgl_test
-su -c chmod a+rwx $CHROOT_DIR/tmp/.virgl_test
-
+echo -e "\nCreating the virgl socket"
+VIRGL_ANDROID=$PATH/virgl_test_server_android
+VIRGL_ANDROID_ARGS="--use-egl-surfaceless"
+VIRGL_ANDROID_PID=$PREFIX/var/run/virgl_test_server_android.pid
+MESA_NOERROR=1 start-stop-daemon --quiet --background --make-pidfile --pidfile $VIRGL_ANDROID_PID --start --exec $VIRGL_ANDROID -- $VIRGL_ANDROID_ARGS
+sleep 3
 	
 }
 
@@ -317,13 +316,22 @@ fi
 		echo -e "\nBinfmt support not detected or missing binfmt-support package, skipping loading of binfmt entries"
 	fi
 
-	echo -e "\nMount termux tmp dir and create xdg runtime dir"
+	echo -e "\nMounting termux tmp dir and creating xdg runtime dir"
 
 	su -c busybox mount --bind $TMPDIR $CHROOT_DIR/tmp                                                        
 	su -c mkdir -p $CHROOT_DIR/tmp/runtime-$USRNAME
 	su -c busybox chroot $CHROOT_DIR "/bin/su - root -c 'chown $USRNAME:$USRNAME /tmp/runtime-$USRNAME'"
-        su -c chown root:root $CHROOT_DIR/tmp
-        su -c chmod 1777 $CHROOT_DIR/tmp
+    su -c chown root:root $CHROOT_DIR/tmp
+    su -c chmod 1777 $CHROOT_DIR/tmp
+
+    echo -e "\nCreating shared memory device node"
+
+    if [ ! -d /dev/shm ]
+    then 
+         su -c mkdir -p /dev/shm
+         su -c chmod 1777 /dev/shm
+         su -c mount -t tmpfs tmpfs /dev/shm
+	fi
 
 	
 	if check_parameters "-x" "${argslist[*]}"
@@ -364,6 +372,7 @@ else
 	fi
 fi
 
+
 }
 
 
@@ -375,15 +384,22 @@ if findmnt $CHROOT_DIR >/dev/null
 then
     XVFB_PID=$CHROOT_DIR/run/Xvfb.pid
     TERMUX_X11_PID=$PREFIX/var/run/termux-x11.pid
-	#kill termux-x11 and virgl processes if they exist
+    VIRGL_ANDROID_PID=$PREFIX/var/run/virgl_test_server_android.pid
+	#kill running processes spawned by this script if they exist
 	if [ -f $TERMUX_X11_PID ];then start-stop-daemon --stop --pidfile $TERMUX_X11_PID;fi
 	if [ -f $XVFB_PID ];then su -c $PATH/start-stop-daemon --stop --pidfile $XVFB_PID;fi
-    #set back right permissions for termux tmp dir
+	if [ -f $VIRGL_ANDROID_PID ];then $PATH/start-stop-daemon --stop --pidfile $VIRGL_ANDROID_PID;fi
+    #deleting pidfiles
     rm -rf $TERMUX_X11_PID
     su -c rm -rf $XVFB_PID
+    rm -rf $VIRGL_ANDROID_PID
+    #set back right permissions for termux tmp dir
     su -c chown $(id -u):$(id -u) $TMPDIR
     su -c chmod 700 $TMPDIR
 	su -c umount -d -l $CHROOT_DIR
+	#deleting shared memory device node
+	su -c umount -l /dev/shm
+	su -c rm -rf /dev/shm
 else
 	echo -e "\nNo container seems to be mounted, exiting"
 fi
