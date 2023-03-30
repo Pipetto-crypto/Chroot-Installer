@@ -1,5 +1,4 @@
 #!/bin/bash
-
 #Colours
 
 RED="\e[1;31m"
@@ -96,13 +95,33 @@ xserver(){
 echo -e "\nStarting X server through Xvfb"
 
 TERMUX_X11=$PATH/termux-x11
+TERMUX_X11_ARGS="--no-xwayland-start"
 XVFB=/usr/bin/Xvfb
 XVFB_ARGS=":0 -ac -screen 0 4096x4096x24 -noreset"
 TERMUX_X11_PID=$PREFIX/var/run/termux-x11.pid
 XVFB_PID=/var/run/Xvfb.pid
-DISPLAY=:0 start-stop-daemon --quiet --background --user $(id -u) --make-pidfile --pidfile $TERMUX_X11_PID --start --exec $TERMUX_X11
+start-stop-daemon --quiet --background --user $(id -u) --make-pidfile --pidfile $TERMUX_X11_PID --start --exec $TERMUX_X11 -- $TERMUX_X11_ARGS
 sleep 4
 su -c busybox chroot $CHROOT_DIR "/usr/sbin/start-stop-daemon --quiet --background --make-pidfile --pidfile $XVFB_PID --start --exec $XVFB -- $XVFB_ARGS"
+
+
+}
+
+xwayland(){
+
+echo -e "\nStarting X server through Xwayland"
+
+TERMUX_X11=$PATH/termux-x11
+TERMUX_X11_ARGS="-ac --no-xwayland-start"
+XWAYLAND=/usr/bin/Xwayland
+XWAYLAND_ARGS=":0 -ac -noreset"
+TERMUX_X11_PID=$PREFIX/var/run/termux-x11.pid
+XWAYLAND_PID=/var/run/Xwayland.pid
+DISPLAY=:0 start-stop-daemon --quiet --background --user $(id -u) --make-pidfile --pidfile $TERMUX_X11_PID --start --exec $TERMUX_X11 -- $TERMUX_X11_ARGS
+sleep 4
+touch $TMPDIR/runtime-$USRNAME/wayland-0
+su -c busybox mount --bind $TMPDIR/termux-x11 $CHROOT_DIR/tmp/runtime-$USRNAME/wayland-0
+su -c busybox chroot $CHROOT_DIR "/usr/bin/env XDG_RUNTIME_DIR=/tmp/runtime-$USRNAME /usr/sbin/start-stop-daemon --background --make-pidfile --pidfile $XWAYLAND_PID --start --exec $XWAYLAND -- $XWAYLAND_ARGS"
 
 
 }
@@ -324,10 +343,9 @@ fi
     su -c chown root:root $CHROOT_DIR/tmp
     su -c chmod 1777 $CHROOT_DIR/tmp
 
-    echo -e "\nCreating shared memory device node"
-
     if [ ! -d /dev/shm ]
     then 
+         echo -e "\nCreating shared memory device node"
          su -c mkdir -p /dev/shm
          su -c chmod 1777 /dev/shm
          su -c mount -t tmpfs tmpfs /dev/shm
@@ -339,6 +357,11 @@ fi
 			xserver #calls the xserver function if the -x option is provided
 	fi
 
+	if check_parameters "-w" "${argslist[*]}"
+	then
+			xwayland
+	fi
+	
 	if check_parameters "-v" "${argslist[*]}"
 	then
 	        virgl_server #calls the xserver function if the -x option
@@ -383,23 +406,23 @@ rm -rf $CONFIG_DIR/running.txt
 if findmnt $CHROOT_DIR >/dev/null
 then
     XVFB_PID=$CHROOT_DIR/run/Xvfb.pid
+    XWAYLAND_PID=$CHROOT_DIR/run/Xwayland.pid
     TERMUX_X11_PID=$PREFIX/var/run/termux-x11.pid
     VIRGL_ANDROID_PID=$PREFIX/var/run/virgl_test_server_android.pid
 	#kill running processes spawned by this script if they exist
 	if [ -f $TERMUX_X11_PID ];then start-stop-daemon --stop --pidfile $TERMUX_X11_PID;fi
 	if [ -f $XVFB_PID ];then su -c $PATH/start-stop-daemon --stop --pidfile $XVFB_PID;fi
+	if [ -f $XWAYLAND_PID ];then su -c $PATH/start-stop-daemon --stop --pidfile $XWAYLAND_PID;fi
 	if [ -f $VIRGL_ANDROID_PID ];then $PATH/start-stop-daemon --stop --pidfile $VIRGL_ANDROID_PID;fi
     #deleting pidfiles
     rm -rf $TERMUX_X11_PID
     su -c rm -rf $XVFB_PID
+    su -c rm -rf $XWAYLAND_PID
     rm -rf $VIRGL_ANDROID_PID
     #set back right permissions for termux tmp dir
     su -c chown $(id -u):$(id -u) $TMPDIR
     su -c chmod 700 $TMPDIR
 	su -c umount -d -l $CHROOT_DIR
-	#deleting shared memory device node
-	su -c umount -l /dev/shm
-	su -c rm -rf /dev/shm
 else
 	echo -e "\nNo container seems to be mounted, exiting"
 fi
