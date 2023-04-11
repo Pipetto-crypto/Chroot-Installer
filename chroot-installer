@@ -20,6 +20,8 @@ CONTAINERS_DIR=$CONFIG_DIR/containers
 CACHED_ROOTFS_DIR=$CONFIG_DIR/cachedrootfses
 ANDROIDVERSION=$(getprop ro.build.version.release | cut -f1,2 -d '.')
 ROOTFS_DIR=~/installed-rootfs
+TERMUX_GID=$(id -g)
+TERMUX_UID=$(id -u)
 #this for cycle put all arguments into array argslist
 index=1
 for var in "$@" 
@@ -595,12 +597,13 @@ fi
 
 if find $CHROOT_DIR/usr/sbin -name groupadd 1>/dev/null 2>&1
 then
+
   	 su -c busybox chroot $CHROOT_DIR "/usr/sbin/groupadd -g 3001 aid_net_bt_admin"
   	 su -c busybox chroot $CHROOT_DIR "/usr/sbin/groupadd -g 3002 aid_net_bt"
   	 su -c busybox chroot $CHROOT_DIR "/usr/sbin/groupadd -g 3003 aid_inet"
   	 su -c busybox chroot $CHROOT_DIR "/usr/sbin/groupadd -g 3004 aid_net_raw"
   	 su -c busybox chroot $CHROOT_DIR "/usr/sbin/groupadd -g 3005 aid_net_admin"
-  	 su -c busybox chroot $CHROOT_DIR "/usr/sbin/groupadd -g $(id -g) $USRMAME"
+  	 su -c busybox chroot $CHROOT_DIR "/usr/sbin/groupadd -g $TERMUX_GID $USRNAME"
   	 SUCCESS1="true"
 fi
 
@@ -612,7 +615,7 @@ fi
  
   if find $CHROOT_DIR/usr/bin -name useradd 1>/dev/null 2>&1 && find $CHROOT_DIR/usr/bin -name passwd 1>/dev/null 2>&1
   then
-		su -c busybox chroot $CHROOT_DIR "/usr/sbin/useradd -s /bin/bash -u $(id -u) -g $(id -g) --create-home $USRNAME"
+		su -c busybox chroot $CHROOT_DIR "/usr/sbin/useradd -s /bin/bash -u $TERMUX_UID -g $TERMUX_GID --create-home $USRNAME"
 		echo -e "\nUser account created, please insert a password for it: "
         su -c busybox chroot $CHROOT_DIR "/usr/bin/passwd $USRNAME"
         echo -e "\nPassword registered, please insert one for your root account as well: "
@@ -636,12 +639,12 @@ fi
   
   if [ "$PACKAGEMANAGER" == "pacman" ]
   then
-       su -c busybox chroot $CHROOT_DIR '/bin/su - root -c "pacman -Syu --noconfirm && pacman -S --noconfirm sudo wget gnupg xorg-server-xvfb xwayland"'
+       su -c busybox chroot $CHROOT_DIR '/bin/su - root -c "pacman -Syu --noconfirm && pacman -S --noconfirm sudo wget gnupg"'
   
   elif [ "$PACKAGEMANAGER" == "apt" ]
   then
        su -c busybox chroot $CHROOT_DIR "/usr/sbin/usermod -g 3003 _apt"
-       su -c busybox chroot $CHROOT_DIR '/bin/su - root -c "apt update && apt install sudo wget gnupg2 xvfb xwayland -y"'
+       su -c busybox chroot $CHROOT_DIR '/bin/su - root -c "apt update && apt install sudo wget gnupg2 -y"'
 
   fi
 
