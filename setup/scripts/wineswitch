@@ -1,0 +1,49 @@
+#!/bin/bash
+
+if [ "$1" != "" ]
+then
+     VERSION="$1"
+else
+     read -p "Select a wine version:" VERSION
+fi
+
+if [ "$2" != "" ]
+then
+     ARCH="$2"
+else
+     read -p "Select an architecture:" ARCH
+fi
+
+installedwinever=$(cat /usr/bin/wine | awk -F '='  '/VERSION/{print $2}' | head -n1)
+installedwine64ver=$(cat /usr/bin/wine64 | awk -F '='  '/VERSION/{print $2}' | head -n1)
+
+if [ ! -d ~/wine-$VERSION-$ARCH ]
+then
+     if (( $(echo "$(echo $VERSION) >= 5.5"|bc -l) ))
+     then
+          wget https://github.com/Kron4ek/Wine-Builds/releases/download/$VERSION/wine-$VERSION-$ARCH.tar.xz -P ~
+          tar -xf ~/wine-$VERSION-$ARCH.tar.xz -C ~
+     else
+          wget https://www.playonlinux.com/wine/binaries/phoenicis/upstream-linux-$ARCH/PlayOnLinux-wine-$VERSION-upstream-linux-$ARCH.tar.gz -P ~
+	  mkdir ~/wine-$VERSION-$ARCH
+	  if file ~/PlayOnLinux-wine-$VERSION-upstream-linux-$ARCH.tar.gz | grep -q gzip
+          then
+               tar -xzf ~/PlayOnLinux-wine-$VERSION-upstream-linux-$ARCH.tar.gz -C ~/wine-$VERSION-$ARCH
+          else
+               tar -xf ~/PlayOnLinux-wine-$VERSION-upstream-linux-$ARCH.tar.gz -C ~/wine-$VERSION-$ARCH
+          fi
+     fi 
+fi
+
+
+case $ARCH in
+amd64)
+      sed  -i "s/$installedwine64ver/$VERSION/g" /usr/bin/wine64
+      ;;
+x86)
+      sed  -i "s/$installedwinever/$VERSION/g" /usr/bin/wine
+      sed  -i "s/$installedwinever/$VERSION/g" /usr/bin/exawine
+      ;;
+esac
+
+rm -rf ~/*.tar.xz && rm -rf ~/*.tar.gz

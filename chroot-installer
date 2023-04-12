@@ -681,37 +681,37 @@ if [ "$DE" == "xfce" ]
 then
 	if [ "$PACKAGEMANAGER" == "apt" ]
 	then
-		su -c busybox chroot $CHROOT_DIR '/bin/su - root -c "apt install tigervnc-standalone-server tigervnc-common dbus-x11 tigervnc-xorg-extension xfce4 xfce4-goodies -y"'
+		su -c busybox chroot $CHROOT_DIR '/bin/su - root -c "apt install tigervnc-standalone-server tigervnc-common dbus-x11 tigervnc-xorg-extension xfce4 xfce4-goodies xvfb xwayland-y"'
 	elif [ "$PACKAGEMANAGER" == "pacman" ]
 	then
-		su -c busybox chroot $CHROOT_DIR '/bin/su - root -c "pacman -S --noconfirm tigervnc dbus xfce4 xfce4-goodies"'
+		su -c busybox chroot $CHROOT_DIR '/bin/su - root -c "pacman -S --noconfirm tigervnc dbus xfce4 xfce4-goodies xorg-server-xvfb xwayland"'
 	fi
 elif [ "$DE" == "lxqt" ]
 then
 	if [ "$PACKAGEMANAGER" == "apt" ]
 	then
-		su -c busybox chroot $CHROOT_DIR '/bin/su - root -c "apt install tigervnc-standalone-server tigervnc-common dbus-x11 tigervnc-xorg-extension lxqt -y"'
+		su -c busybox chroot $CHROOT_DIR '/bin/su - root -c "apt install tigervnc-standalone-server tigervnc-common dbus-x11 xvfb xwayland tigervnc-xorg-extension lxqt -y"'
 	elif [ "$PACKAGEMANAGER" == "pacman" ]
 	then
-		su -c busybox chroot $CHROOT_DIR '/bin/su - root -c "pacman -S --noconfirm tigervnc dbus lxqt"'
+		su -c busybox chroot $CHROOT_DIR '/bin/su - root -c "pacman -S --noconfirm xorg-server-xvfb xwayland tigervnc dbus lxqt"'
 	fi
 elif [ "$DE" == "icewm" ]
 then
 	if [ "$PACKAGEMANAGER" == "apt" ]
 	then
-		su -c busybox chroot $CHROOT_DIR '/bin/su - root -c "apt install tigervnc-standalone-server tigervnc-common dbus-x11 tigervnc-xorg-extension icewm -y"'
+		su -c busybox chroot $CHROOT_DIR '/bin/su - root -c "apt install tigervnc-standalone-server xvfb xwayland tigervnc-common dbus-x11 tigervnc-xorg-extension icewm -y"'
 	elif [ "$PACKAGEMANAGER" == "pacman" ]
 	then
-		su -c busybox chroot $CHROOT_DIR '/bin/su - root -c "pacman -S --noconfirm tigervnc dbus icewm xorg-fonts-misc xterm"'
+		su -c busybox chroot $CHROOT_DIR '/bin/su - root -c "pacman -S --noconfirm xorg-server-xvfb xwayland tigervnc dbus icewm xorg-fonts-misc xterm"'
 	fi
 elif [ "$DE" == "fluxbox" ]
 then
 	 if [ "$PACKAGEMANAGER" == "apt" ]
 	 then
-	      su -c busybox chroot $CHROOT_DIR '/bin/su - root -c "apt install tigervnc-standalone-server tigervnc-common dbus-x11 tigervnc-xorg-extension fluxbox xterm -y"'
+	      su -c busybox chroot $CHROOT_DIR '/bin/su - root -c "apt install xwayland xvfb tigervnc-standalone-server tigervnc-common dbus-x11 tigervnc-xorg-extension fluxbox xterm -y"'
 	  elif [ "$PACKAGEMANAGER" == "pacman" ]
 	  then
-	      su -c busybox chroot $CHROOT_DIR '/bin/su - root -c "pacman -S --noconfirm tigervnc dbus fluxbox xterm"'
+	      su -c busybox chroot $CHROOT_DIR '/bin/su - root -c "pacman -S --noconfirm xorg-server-xvfb xwayland tigervnc dbus fluxbox xterm"'
 	fi
 fi
 
@@ -872,8 +872,8 @@ do
 	fi
 done
 #check if -b option is present
- for i in ${argslist[@]}
- do
+for i in ${argslist[@]}
+do
 	if [ "$i" == "-b" ]
   	then #if manjaro or arch installation, installbonly box64
   		if [ "$PACKAGEMANAGER" == "pacman" ]
@@ -894,8 +894,8 @@ done
           		su -c busybox chroot $CHROOT_DIR "/bin/su - root -c '/usr/sbin/update-binfmts --import'"
            fi
 
-	 fi
-  done
+	fi
+done
 
 
 echo -e "\nFirst setup completed, stopping the chroot"

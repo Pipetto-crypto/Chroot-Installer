@@ -10,10 +10,11 @@ OPMODES=$(lscpu | grep  "CPU op-mode" | awk -F ":" '{print $2}')
 
 echo -e "Installing required dependencies dependencies"
 
-sudo pacman -S base-devel git cmake python3 --needed --noconfirm
+sudo pacman -S mesa zenity libasound base-devel git cmake python3 --needed --noconfirm
 
 if [ "$ARCH" == "aarch64" ] || [ "$(echo $OPMODES)" == "32-bit, 64-bit" ]
 then
+	IS64BIT="true"
 	echo -e "Installing box64"
 
 	if ! ls -l /usr/local/bin | grep -q box64
@@ -44,24 +45,14 @@ else
 fi
 
 
-echo -e "Setting up env"
-
-echo "export BOX86_PATH=~/wine$VERSION/bin/" | sudo tee -a /etc/profile >/dev/null 2>&1                                                                                                  
-echo "export BOX86_LD_LIBRARY_PATH=~/wine$VERSION/lib/wine/i386-unix/:/lib/i386-linux-gnu:/lib/aarch64-linux-gnu/" | sudo tee -a /etc/profile >/dev/null 2>&1
-echo "export BOX64_PATH=~/wine$VERSION/bin/" | sudo tee -a /etc/profile >/dev/null 2>&1
-echo "export BOX64_LD_LIBRARY_PATH=~/wine$VERSION/lib/wine/i386-unix/:~/wine$VERSION/lib/wine/x86_64-unix/:/lib/i386-linux-gnu/:/lib/x86_64-linux-gnu:/lib/aarch64-linux-gnu:/usr/x86_64-linux-gnu/lib"  | sudo tee -a /etc/profile >/dev/null 2>&1 
-echo "export BOX86_BASH=~/box_bash/bash_x86" | sudo tee -a /etc/profile >/dev/null 2>&1
-echo "export BOX64_BASH=~/box_bash/bash_x64" | sudo tee -a /etc/profile >/dev/null 2>&1
-echo "export WINEPREFIX=~/.local/wineprefixes/wine$VERSION" | sudo tee -a /etc/profile >/dev/null 2>&1
-
 echo -e "Installing wine"
 
-wget https://github.com/Kron4ek/Wine-Builds/releases/download/$VERSION/wine-$VERSION-$WINEARCH.tar.xz
-tar -xvf wine-$VERSION-$WINEARCH.tar.xz
-mv wine-$VERSION-$WINEARCH wine$VERSION
-mkdir -p ~/.local/wineprefixes
-
-
+mkdir -p $HOME/.local/wineprefix
+mkdir -p $HOME/.local/wineprefix64
+mv $HOME/scripts/wineswitch  $HOME/scripts/wine $HOME/scripts/wine64 /usr/bin
+sudo chmod +x /usr/bin/wineswitch /usr/bin/wine /usr/bin/wine64
+wineswitch $VERSION x86
+if [ "$IS64BIT" == "true" ];then wineswitch $VERSION amd64;fi
 
 echo -e "Installing bash_x86 and bash_x64"
 
