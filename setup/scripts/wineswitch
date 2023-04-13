@@ -17,6 +17,12 @@ fi
 installedwinever=$(cat /usr/bin/wine | awk -F '='  '/VERSION/{print $2}' | head -n1)
 installedwine64ver=$(cat /usr/bin/wine64 | awk -F '='  '/VERSION/{print $2}' | head -n1)
 
+if [ "$ARCH" == "uni" ]
+then
+     ARCH=amd64
+     REALARCH=uni
+fi
+
 if [ ! -d ~/wine-$VERSION-$ARCH ]
 then
      if (( $(echo "$(echo $VERSION) >= 5.5"|bc -l) ))
@@ -38,7 +44,13 @@ fi
 
 case $ARCH in
 amd64)
-      sudo sed  -i "s/$installedwine64ver/$VERSION/g" /usr/bin/wine64
+      if [ "$REALARCH" == "uni" ]
+      then
+           sudo sed  -i "s/$installedwine64ver/$VERSION/g" /usr/bin/wine64
+           sudo sed  -i "s/$installedwinever/$VERSION/g" /usr/bin/wine
+      else
+           sudo sed  -i "s/$installedwine64ver/$VERSION/g" /usr/bin/wine64
+      fi
       ;;
 x86)
       sudo sed  -i "s/$installedwinever/$VERSION/g" /usr/bin/wine

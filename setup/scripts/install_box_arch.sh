@@ -4,7 +4,6 @@
 
 
 VERSION=7.1
-WINEARCH=amd64
 ARCH=$(uname -m)
 OPMODES=$(lscpu | grep  "CPU op-mode" | awk -F ":" '{print $2}')
 
@@ -14,7 +13,6 @@ sudo pacman -S mesa zenity libasound base-devel git cmake python3 bc file xz --n
 
 if [ "$ARCH" == "aarch64" ] || [ "$(echo $OPMODES)" == "32-bit, 64-bit" ]
 then
-	IS64BIT="true"
 	echo -e "Installing box64"
 
 	if ! ls -l /usr/local/bin | grep -q box64
@@ -51,8 +49,7 @@ mkdir -p $HOME/.local/wineprefix
 mkdir -p $HOME/.local/wineprefix64
 sudo mv $HOME/scripts/wineswitch  $HOME/scripts/wine $HOME/scripts/wine64 /usr/bin
 sudo chmod +x /usr/bin/wineswitch /usr/bin/wine /usr/bin/wine64
-wineswitch $VERSION x86
-if [ "$IS64BIT" == "true" ];then wineswitch $VERSION amd64;fi
+wineswitch $VERSION uni
 
 echo -e "Installing bash_x86 and bash_x64"
 
