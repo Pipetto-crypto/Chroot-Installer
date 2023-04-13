@@ -25,7 +25,7 @@ do
    if [ -f $var ]
    then
         absfile=$(realpath -e $var)
-        argslist[$index]=$absfile
+        argslist[$index]="$absfile"
    elif [ "$var" == "-log" ]
    then
         log

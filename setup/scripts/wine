@@ -23,7 +23,7 @@ do
    if [ -f $var ]
    then
         absfile=$(realpath -e $var)
-        argslist[$index]=$absfile
+        argslist[$index]="$absfile"
    elif [ "$var" == "-log" ]
    then 
 	log 
@@ -40,5 +40,5 @@ then
      exit
 fi
 
-eval WINEDLLOVERRIDES=$WINEDLLOVERRIDES WINEPREFIX=$WINEPREFIX BOX86_LD_LIBRARY_PATH=$BOX86_LD_LIBRARY_PATH BOX86_PATH=$BOX86_PATH box86 wine "${argslist[@]}"
+WINEDLLOVERRIDES=$WINEDLLOVERRIDES WINEPREFIX=$WINEPREFIX BOX86_LD_LIBRARY_PATH=$BOX86_LD_LIBRARY_PATH BOX86_PATH=$BOX86_PATH box86 wine "${argslist[@]}"
 
