@@ -18,6 +18,7 @@ sudo apt install mesa-*:armhf zenity:armhf libasound*:armhf libstdc++6:armhf -y
 sudo wget https://ryanfortner.github.io/box86-debs/box86.list -O /etc/apt/sources.list.d/box86.list
 wget -qO- https://ryanfortner.github.io/box86-debs/KEY.gpg | sudo gpg --dearmor -o /etc/apt/trusted.gpg.d/box86-debs-archive-keyring.gpg 
 sudo apt update && sudo apt install box86-android:armhf -y
+sudo ln -f /usr/local/bin/box86 /usr/bin/box86
 
 fi
 
@@ -26,10 +27,11 @@ then
 
 echo -e "\nInstalling box64"
 IS64BIT="true"
-sudo apt install mesa-* zenity* gcc-multilib-x86-64-linux-gnu -y
+sudo apt install mesa-* zenity* gcc-multilib-x86-64-linux-gnu bc file xz-utils -y
 sudo wget https://ryanfortner.github.io/box64-debs/box64.list -O /etc/apt/sources.list.d/box64.list
 wget -qO- https://ryanfortner.github.io/box64-debs/KEY.gpg | sudo gpg --dearmor -o /etc/apt/trusted.gpg.d/box64-debs-archive-keyring.gpg 
 sudo apt update && sudo apt install box64-android -y
+sudo ln -f /usr/local/bin/box64 /usr/bin/box64
 
 fi
 
@@ -37,7 +39,7 @@ echo -e "\nInstalling wine"
 
 mkdir -p $HOME/.local/wineprefix
 mkdir -p $HOME/.local/wineprefix64
-mv $HOME/scripts/wineswitch  $HOME/scripts/wine $HOME/scripts/wine64 /usr/bin
+sudo mv $HOME/scripts/wineswitch  $HOME/scripts/wine $HOME/scripts/wine64 /usr/bin
 sudo chmod +x /usr/bin/wineswitch /usr/bin/wine /usr/bin/wine64
 wineswitch $VERSION x86
 if [ "$IS64BIT" == "true" ];then wineswitch $VERSION amd64;fi

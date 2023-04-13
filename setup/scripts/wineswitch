@@ -38,11 +38,10 @@ fi
 
 case $ARCH in
 amd64)
-      sed  -i "s/$installedwine64ver/$VERSION/g" /usr/bin/wine64
+      sudo sed  -i "s/$installedwine64ver/$VERSION/g" /usr/bin/wine64
       ;;
 x86)
-      sed  -i "s/$installedwinever/$VERSION/g" /usr/bin/wine
-      sed  -i "s/$installedwinever/$VERSION/g" /usr/bin/exawine
+      sudo sed  -i "s/$installedwinever/$VERSION/g" /usr/bin/wine
       ;;
 esac
 

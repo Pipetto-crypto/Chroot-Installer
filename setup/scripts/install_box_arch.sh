@@ -10,7 +10,7 @@ OPMODES=$(lscpu | grep  "CPU op-mode" | awk -F ":" '{print $2}')
 
 echo -e "Installing required dependencies dependencies"
 
-sudo pacman -S mesa zenity libasound base-devel git cmake python3 --needed --noconfirm
+sudo pacman -S mesa zenity libasound base-devel git cmake python3 bc file xz --needed --noconfirm
 
 if [ "$ARCH" == "aarch64" ] || [ "$(echo $OPMODES)" == "32-bit, 64-bit" ]
 then
@@ -49,7 +49,7 @@ echo -e "Installing wine"
 
 mkdir -p $HOME/.local/wineprefix
 mkdir -p $HOME/.local/wineprefix64
-mv $HOME/scripts/wineswitch  $HOME/scripts/wine $HOME/scripts/wine64 /usr/bin
+sudo mv $HOME/scripts/wineswitch  $HOME/scripts/wine $HOME/scripts/wine64 /usr/bin
 sudo chmod +x /usr/bin/wineswitch /usr/bin/wine /usr/bin/wine64
 wineswitch $VERSION x86
 if [ "$IS64BIT" == "true" ];then wineswitch $VERSION amd64;fi

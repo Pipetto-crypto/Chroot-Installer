@@ -653,17 +653,16 @@ fi
   su -c cp $SCRIPTS_DIR/* $BOX_CONFIGS_DIR/* $CHROOT_DIR/home/$USRNAME/scripts
   su -c chmod -R a+rwx $CHROOT_DIR/home/$USRNAME/scripts
 
-  su -c busybox chroot $CHROOT_DIR "/bin/su - $USRNAME -c '/home/$USRNAME/scripts/setup_env.sh'"
+if [ "${argslist[3]}" == "--custom" ]
+then
+     echo -e "\nInstallation completed, exiting"
+     su -c umount -d -l $CHROOT_DIR
+     cp $SETUP_DIR/chroot-installer $PATH
+     chmod +x $PATH/chroot-installer
+     exit
+fi
 
-  if [ "${argslist[3]}" == "--custom" ]
-  then
-  	   echo -e "\nInstallation completed, exiting"
-  	   su -c umount -d -l $CHROOT_DIR
-  	   cp $SETUP_DIR/chroot-launcher $PATH
-  	   cp $SETUP_DIR/chroot-installer $PATH
-  	   chmod +x $PATH/chroot-launcher $PATH/chroot-installer
-  	   exit
-  fi
+su -c busybox chroot $CHROOT_DIR "/bin/sudo -u $USRNAME /home/$USRNAME/scripts/setup_env.sh"
 
 
   #Mark the newly created container as default
@@ -729,12 +728,12 @@ then
 	git -C ~/Chroot-Installer pull
 	rm -rf $SETUP_DIR
 	cp -r ~/Chroot-Installer/setup $CONFIG_DIR
-	cp ~/Chroot-Installer/chroot-launcher ~/Chroot-Installer/chroot-installer $SETUP_DIR
+	cp ~/Chroot-Installer/chroot-installer $SETUP_DIR
 else
 	git clone https://github.com/Pipetto-crypto/Chroot-Installer.git ~/Chroot-Installer
 	rm -rf $SETUP_DIR
 	cp -r ~/Chroot-Installer/setup $CONFIG_DIR
-	cp ~/Chroot-Installer/chroot-launcher ~/Chroot-Installer/chroot-installer $SETUP_DIR
+	cp ~/Chroot-Installer/chroot-installer $SETUP_DIR
 fi 
 
 	
@@ -904,9 +903,8 @@ su -c umount -d -l $CHROOT_DIR
 
 echo -e "\nCopying the chroot-launcher and chroot-installer scripts to $PATH"
 
-cp $SETUP_DIR/chroot-launcher $PATH
 cp $SETUP_DIR/chroot-installer $PATH
-chmod +x $PATH/chroot-launcher $PATH/chroot-installer
+chmod +x $PATH/chroot-installer
 
 }
 
