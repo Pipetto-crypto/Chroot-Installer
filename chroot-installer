@@ -613,45 +613,46 @@ then
   	 SUCCESS2="true"
 fi
  
-  if find $CHROOT_DIR/usr/bin -name useradd 1>/dev/null 2>&1 && find $CHROOT_DIR/usr/bin -name passwd 1>/dev/null 2>&1
-  then
-		su -c busybox chroot $CHROOT_DIR "/usr/sbin/useradd -s /bin/bash -u $TERMUX_UID -g $TERMUX_GID --create-home $USRNAME"
-		echo -e "\nUser account created, please insert a password for it: "
-        su -c busybox chroot $CHROOT_DIR "/usr/bin/passwd $USRNAME"
-        echo -e "\nPassword registered, please insert one for your root account as well: "
-		su -c busybox chroot $CHROOT_DIR "/usr/bin/passwd root"
-		if [ "$SUCCESS1" == "true" ] && [ "$SUCCESS2" == "true" ]
-		then
-			su -c busybox chroot $CHROOT_DIR "/usr/sbin/usermod -aG aid_inet,aid_net_raw,aid_net_admin,aid_net_bt,aid_net_bt_admin $USRNAME"
-			if [ "${argslist[3]}" == "manjaro" ]
-			then
-				su -c busybox chroot $CHROOT_DIR "/usr/sbin/usermod -aG wheel $USRNAME"
-			else
-				su -c busybox chroot $CHROOT_DIR "/usr/sbin/usermod -aG sudo $USRNAME"
-			fi
-     	fi
-  else
-  		USRNAME="root"
-  fi     	  
+if find $CHROOT_DIR/usr/bin -name useradd 1>/dev/null 2>&1 && find $CHROOT_DIR/usr/bin -name passwd 1>/dev/null 2>&1
+then
+     su -c busybox chroot $CHROOT_DIR "/usr/sbin/useradd -s /bin/bash -u $TERMUX_UID -g $TERMUX_GID --create-home $USRNAME"
+     echo -e "\nUser account created, please insert a password for it: "
+     su -c busybox chroot $CHROOT_DIR "/usr/bin/passwd $USRNAME"
+     echo -e "\nPassword registered, please insert one for your root account as well: "
+     su -c busybox chroot $CHROOT_DIR "/usr/bin/passwd root"
+     if [ "$SUCCESS1" == "true" ] && [ "$SUCCESS2" == "true" ]
+	 then
+		  su -c busybox chroot $CHROOT_DIR "/usr/sbin/usermod -aG aid_inet,aid_net_raw,aid_net_admin,aid_net_bt,aid_net_bt_admin $USRNAME"
+		  if [ "${argslist[3]}" == "manjaro" ]
+		  then
+			   su -c busybox chroot $CHROOT_DIR "/usr/sbin/usermod -aG wheel $USRNAME"
+		  else
+			   su -c busybox chroot $CHROOT_DIR "/usr/sbin/usermod -aG sudo $USRNAME"
+		  fi
+      fi
+else
+  	  USRNAME="root"
+fi     	  
 
-  echo "USERNAME=$USRNAME" >> $CONFIG_FILE
+echo "USERNAME=$USRNAME" >> $CONFIG_FILE
 
   
-  if [ "$PACKAGEMANAGER" == "pacman" ]
-  then
-       su -c busybox chroot $CHROOT_DIR '/bin/su - root -c "pacman -Syu --noconfirm && pacman -S --noconfirm sudo wget gnupg"'
+if [ "$PACKAGEMANAGER" == "pacman" ]
+then
+     su -c busybox chroot $CHROOT_DIR '/bin/su - root -c "pacman -Syu --noconfirm && pacman -S --noconfirm sudo wget gnupg"'
   
-  elif [ "$PACKAGEMANAGER" == "apt" ]
-  then
-       su -c busybox chroot $CHROOT_DIR "/usr/sbin/usermod -g 3003 _apt"
-       su -c busybox chroot $CHROOT_DIR '/bin/su - root -c "apt update && apt install sudo wget gnupg2 -y"'
+elif [ "$PACKAGEMANAGER" == "apt" ]
+then
+     su -c busybox chroot $CHROOT_DIR "/usr/sbin/usermod -g 3003 _apt"
+     su -c busybox chroot $CHROOT_DIR '/bin/su - root -c "apt update && apt install sudo wget gnupg2 -y"'
 
-  fi
+fi
 
-  echo -e "\nFirst setup almost completed, copying required installation scripts"
-  su -c mkdir -p $CHROOT_DIR/home/$USRNAME/scripts
-  su -c cp $SCRIPTS_DIR/* $BOX_CONFIGS_DIR/* $CHROOT_DIR/home/$USRNAME/scripts
-  su -c chmod -R a+rwx $CHROOT_DIR/home/$USRNAME/scripts
+echo -e "\nFirst setup almost completed, copying required installation scripts"
+
+su -c mkdir -p $CHROOT_DIR/home/$USRNAME/scripts
+su -c cp $SCRIPTS_DIR/* $BOX_CONFIGS_DIR/* $CHROOT_DIR/home/$USRNAME/scripts
+su -c chmod -R a+rwx $CHROOT_DIR/home/$USRNAME/scripts
 
 if [ "${argslist[3]}" == "--custom" ]
 then
@@ -665,8 +666,8 @@ fi
 su -c busybox chroot $CHROOT_DIR "/bin/sudo -u $USRNAME /home/$USRNAME/scripts/setup_env.sh"
 
 
-  #Mark the newly created container as default
-  mark_default
+#Mark the newly created container as default
+mark_default
   
 
 
@@ -901,7 +902,7 @@ echo -e "\nFirst setup completed, stopping the chroot"
 
 su -c umount -d -l $CHROOT_DIR
 
-echo -e "\nCopying the chroot-launcher and chroot-installer scripts to $PATH"
+echo -e "\nCopying the chroot-installer script to PATH"
 
 cp $SETUP_DIR/chroot-installer $PATH
 chmod +x $PATH/chroot-installer

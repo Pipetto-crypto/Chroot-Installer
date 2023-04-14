@@ -23,6 +23,8 @@ if [ "$ARCH" == "uni" ]
 then
      ARCH=amd64
      REALARCH=uni
+else 
+     REALARCH=""
 fi
 
 if [ ! -d ~/wine-$VERSION-$ARCH ]

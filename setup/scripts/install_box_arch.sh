@@ -49,7 +49,8 @@ mkdir -p $HOME/.local/wineprefix
 mkdir -p $HOME/.local/wineprefix64
 sudo mv $HOME/scripts/wineswitch  $HOME/scripts/wine $HOME/scripts/wine64 /usr/bin
 sudo chmod +x /usr/bin/wineswitch /usr/bin/wine /usr/bin/wine64
-wineswitch $VERSION uni
+if [ "$ARCH" == "aarch64" ] || [ "$(echo $OPMODES)" == "32-bit, 64-bit" ];then wineswitch $VERSION x86;else wineswitch $VERSION amd64;fi
+
 
 echo -e "Installing bash_x86 and bash_x64"
 
