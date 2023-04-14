@@ -41,4 +41,8 @@ then
      exit
 fi
 
-BOX64_LOG=$BOX64_LOG WINEDLLOVERRIDES=$WINEDLLOVERRIDES WINEPREFIX=$WINEPREFIX BOX64_PATH=$BOX64_PATH BOX64_LD_LIBRARY_PATH=$BOX64_LD_LIBRARY_PATH box64 wine64 "${argslist[@]}"
+BOX64_LD_LIBRARY_PATH=~/wine-$VERSION-$ARCH/lib/wine/i386-unix/:~/wine-$VERSION-$ARCH/lib/wine/:~/wine-$VERSION-$ARCH/lib:~/wine-$VERSION-$ARCH/lib/wine/x86_64-unix/:/lib/i386-linux-gnu/:/lib/x86_64-linux-gnu:/lib/aarch64-linux-gnu:/usr/x86_64-linux-gnu/lib \
+BOX64_PATH=~/wine-$VERSION-$ARCH/bin \
+WINEPREFIX=${WINEPREFIX:-$HOME/.local/wineprefix64/wine-$VERSION} \
+BOX64_LOG=${BOX64_LOG:-0} \
+box64 wine64 "${argslist[@]}"

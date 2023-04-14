@@ -18,6 +18,7 @@ installedwinever=$(cat /usr/bin/wine | awk -F '='  '/VERSION/{print $2}' | head 
 installedwine64ver=$(cat /usr/bin/wine64 | awk -F '='  '/VERSION/{print $2}' | head -n1)
 installedwinearch=$(cat /usr/bin/wine | awk -F '='  '/ARCH/{print $2}' | head -n1)
 
+
 if [ "$ARCH" == "uni" ]
 then
      ARCH=amd64
@@ -50,13 +51,15 @@ amd64)
            sudo sed  -i "s/$installedwine64ver/$VERSION/g" /usr/bin/wine64
            sudo sed  -i "s/$installedwinever/$VERSION/g" /usr/bin/wine
            sudo sed  -i "s/$installedwinearch/$ARCH/g" /usr/bin/wine 
+           if [ -f /usr/bin/exawine ];then sudo sed  -i "s/$installedwinever/$VERSION/g" /usr/bin/exawine && sudo sed  -i "s/$installedwinearch/$ARCH/g" /usr/bin/exawine;fi
       else
            sudo sed  -i "s/$installedwine64ver/$VERSION/g" /usr/bin/wine64
       fi
       ;;
 x86)
       sudo sed  -i "s/$installedwinever/$VERSION/g" /usr/bin/wine
-      if [ "$installedwinearch" == "amd64" ];then sudo sed  -i "s/$installedwinearch/$ARCH/g" /usr/bin/wine;fi
+      sudo sed  -i "s/$installedwinearch/$ARCH/g" /usr/bin/wine;fi
+      if [ -f /usr/bin/exawine ];then sudo sed  -i "s/$installedwinever/$VERSION/g" /usr/bin/exawine && sudo sed  -i "s/$installedwinearch/$ARCH/g" /usr/bin/exawine;fi
       ;;
 esac
 

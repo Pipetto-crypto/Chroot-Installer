@@ -5,9 +5,6 @@ DATE=$(date -u +%F@%T)
 TERMINAL_LOGFILE=~/box86_logs/terminal_log@$DATE.txt
 VERSION=7.1
 ARCH=x86
-BOX86_LD_LIBRARY_PATH=~/wine-$VERSION-$ARCH/lib/wine/i386-unix/:~/wine-$VERSION-$ARCH/lib:~/wine-$VERSION-$ARCH/lib/wine:/lib/i386-linux-gnu:/lib/aarch64-linux-gnu/
-BOX86_PATH=~/wine-$VERSION-$ARCH/bin
-WINEPREFIX=${WINEPREFIX:-$HOME/.local/wineprefix/wine-$VERSION}
 
 log(){
 echo -e "This wine session will be logged in $TERMINAL_LOGFILE"
@@ -40,5 +37,9 @@ then
      exit
 fi
 
-WINEDLLOVERRIDES=$WINEDLLOVERRIDES WINEPREFIX=$WINEPREFIX BOX86_LD_LIBRARY_PATH=$BOX86_LD_LIBRARY_PATH BOX86_PATH=$BOX86_PATH box86 wine "${argslist[@]}"
+env BOX86_LD_LIBRARY_PATH=~/wine-$VERSION-$ARCH/lib/wine/i386-unix/:~/wine-$VERSION-$ARCH/lib:~/wine-$VERSION-$ARCH/lib/wine:/lib/i386-linux-gnu:/lib/aarch64-linux-gnu/ \
+BOX86_PATH=~/wine-$VERSION-$ARCH/bin \
+WINEPREFIX=${WINEPREFIX:-$HOME/.local/wineprefix/wine-$VERSION} \
+BOX86_DYNAREC_BIGBLOCK=${BOX86_DYNAREC_BIGBLOCK:-0} \
+box86 wine "${argslist[@]}"
 

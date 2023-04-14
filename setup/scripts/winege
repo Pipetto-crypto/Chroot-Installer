@@ -3,12 +3,8 @@
 
 VERSION=7-42
 ARCH=x86_64
-BOX64_LD_LIBRARY_PATH=~/lutris-GE-Proton$VERSION-$ARCH/lib/wine/i386-unix/:~/lutris-GE-Proton$VERSION-$ARCH/lib/wine/:~/lutris-GE-Proton$VERSION-$ARCH/lib:~/lutris-GE-Proton$VERSION-$ARCH/lib64/wine/x86_64-unix/:~/lutris-GE-Proton$VERSION-$ARCH/lib64:/lib/i386-linux-gnu/:/lib/x86_64-linux-gnu:/lib/aarch64-linux-gnu:/usr/x86_64-linux-gnu/lib
-BOX64_PATH=~/lutris-GE-Proton$VERSION-$ARCH/bin
-WINEPREFIX=${WINEPREFIX:-$HOME/.local/wineprefix64/lutris-GE-Proton$VERSION}
 DATE=$(date -u +%F@%T)
 TERMINAL_LOGFILE=~/box64_logs/terminal_log@$DATE.txt
-BOX64_LOG=${BOX64_LOG:-0}
 
 log(){
 
@@ -42,5 +38,8 @@ then
      exit
 fi
 
-
-BOX64_LOG=$BOX64_LOG WINEDLLOVERRIDES=$WINEDLLOVERRIDES WINEPREFIX=$WINEPREFIX BOX64_PATH=$BOX64_PATH BOX64_LD_LIBRARY_PATH=$BOX64_LD_LIBRARY_PATH box64 wine64 "${argslist[@]}"
+BOX64_LD_LIBRARY_PATH=~/lutris-GE-Proton$VERSION-$ARCH/lib/wine/i386-unix/:~/lutris-GE-Proton$VERSION-$ARCH/lib/wine/:~/lutris-GE-Proton$VERSION-$ARCH/lib:~/lutris-GE-Proton$VERSION-$ARCH/lib64/wine/x86_64-unix/:~/lutris-GE-Proton$VERSION-$ARCH/lib64:/lib/i386-linux-gnu/:/lib/x86_64-linux-gnu:/lib/aarch64-linux-gnu:/usr/x86_64-linux-gnu/lib \
+BOX64_PATH=~/lutris-GE-Proton$VERSION-$ARCH/bin \
+WINEPREFIX=${WINEPREFIX:-$HOME/.local/wineprefix64/lutris-GE-Proton$VERSION} \
+BOX64_LOG=${BOX64_LOG:-0} \
+box64 wine64 "${argslist[@]}"
