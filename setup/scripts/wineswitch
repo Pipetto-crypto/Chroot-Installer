@@ -50,14 +50,14 @@ amd64)
       then
            sudo sed  -i "s/$installedwine64ver/$VERSION/g" /usr/bin/wine64
            sudo sed  -i "s/$installedwinever/$VERSION/g" /usr/bin/wine
-           sudo sed  -i "s/$installedwinearch/$ARCH/g" /usr/bin/wine 
+           sudo sed  -i "0,/$installedwinearch/s//$ARCH/" /usr/bin/wine 
       else
            sudo sed  -i "s/$installedwine64ver/$VERSION/g" /usr/bin/wine64
       fi
       ;;
 x86)
       sudo sed  -i "s/$installedwinever/$VERSION/g" /usr/bin/wine
-      sudo sed  -i "s/$installedwinearch/$ARCH/g" /usr/bin/wine;fi
+      sudo sed  -i "s/$installedwinearch/$ARCH/g" /usr/bin/wine
       ;;
 esac
 
