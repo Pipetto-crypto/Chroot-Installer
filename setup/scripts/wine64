@@ -5,10 +5,6 @@ VERSION=7.1
 ARCH=amd64
 DATE=$(date -u +%F@%T)
 TERMINAL_LOGFILE=~/box64_logs/terminal_log@$DATE.txt
-BOX64_LD_LIBRARY_PATH=~/wine-$VERSION-$ARCH/lib/wine/i386-unix/:~/wine-$VERSION-$ARCH/lib/wine/:~/wine-$VERSION-$ARCH/lib:~/wine-$VERSION-$ARCH/lib/wine/x86_64-unix/:/lib/i386-linux-gnu/:/lib/x86_64-linux-gnu:/lib/aarch64-linux-gnu:/usr/x86_64-linux-gnu/lib
-BOX64_PATH=~/wine-$VERSION-$ARCH/bin
-WINEPREFIX=${WINEPREFIX:-$HOME/.local/wineprefix64/wine-$VERSION}
-BOX64_LOG=${BOX64_LOG:-0}
 
 log(){
 

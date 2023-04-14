@@ -51,7 +51,6 @@ amd64)
            sudo sed  -i "s/$installedwine64ver/$VERSION/g" /usr/bin/wine64
            sudo sed  -i "s/$installedwinever/$VERSION/g" /usr/bin/wine
            sudo sed  -i "s/$installedwinearch/$ARCH/g" /usr/bin/wine 
-           if [ -f /usr/bin/exawine ];then sudo sed  -i "s/$installedwinever/$VERSION/g" /usr/bin/exawine && sudo sed  -i "s/$installedwinearch/$ARCH/g" /usr/bin/exawine;fi
       else
            sudo sed  -i "s/$installedwine64ver/$VERSION/g" /usr/bin/wine64
       fi
@@ -59,7 +58,6 @@ amd64)
 x86)
       sudo sed  -i "s/$installedwinever/$VERSION/g" /usr/bin/wine
       sudo sed  -i "s/$installedwinearch/$ARCH/g" /usr/bin/wine;fi
-      if [ -f /usr/bin/exawine ];then sudo sed  -i "s/$installedwinever/$VERSION/g" /usr/bin/exawine && sudo sed  -i "s/$installedwinearch/$ARCH/g" /usr/bin/exawine;fi
       ;;
 esac
 
