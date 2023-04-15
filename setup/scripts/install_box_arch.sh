@@ -43,7 +43,7 @@ else
 fi
 
 
-echo -e "Installing wine"
+echo -e "Copying wine wrappers and wineswitch script, installing wine"
 
 mkdir -p $HOME/.local/wineprefix
 mkdir -p $HOME/.local/wineprefix64

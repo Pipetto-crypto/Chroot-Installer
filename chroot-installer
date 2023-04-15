@@ -897,6 +897,12 @@ do
 	fi
 done
 
+echo -e "Unpacking GPU-acceleration ready Mesa libs"
+
+su -c busybox tar -Jxvf $EXTRA_CONFIGS_DIR/mesa32-turnip-zink-virgl-23.2.0.tar.xz -C $CHROOT_DIR
+su -c busybox tar -Jxvf $EXTRA_CONFIGS_DIR/mesa64-turnip-zink-virgl-23.2.0.tar.xz -C $CHROOT_DIR
+su -c cp $CHROOT_DIR/home/$USRNAME/scripts/gpuswitch $CHROOT_DIR/usr/bin
+su -c chmod +x $CHROOT_DIR/usr/bin/gpuswitch 
 
 echo -e "\nFirst setup completed, stopping the chroot"
 

@@ -35,7 +35,7 @@ sudo ln -f /usr/local/bin/box64 /usr/bin/box64
 
 fi
 
-echo -e "\nInstalling wine"
+echo -e "\nCopying wine wrappers and winswitch script, installing wine"
 
 mkdir -p $HOME/.local/wineprefix
 mkdir -p $HOME/.local/wineprefix64
