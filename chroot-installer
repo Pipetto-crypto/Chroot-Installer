@@ -742,18 +742,12 @@ fi
 
 install(){
 
-echo -e "$RED""\nWARNING: THIS SCRIPT IS UNTESTED ON ANDROID VERSIONS NEWER THAN 10, SO IT MAY NOT WORK. ISSUES ABOUT NOT WORKING ON NEWER ANDROID VERSIONS WILL ONLY BE ACCEPTED WHEN PROPER LOGS ARE PROVIDED""$WHITE"
+echo -e "$RED""\nWARNING: THIS SCRIPT IS IN EARLY DEVELOPMENT AND IT HAS ONLY REPORTED WORKING ON ANDROID VERSIONS NEWER THAN 10. USE AT YOUR OWN RISK"
 echo -e "$RED""\nWARNING: TERMUX:X11 APP MAY NOT WORK IN A CHROOT DEPENDING ON YOUR ANDROID VERSION. NO ISSUES WILL BE ACCEPTED ABOUT TERMUX:X11 AS THEY AREN'T RELATED TO THIS SCRIPT""$WHITE"
+echo -e "$RED""\nWARNING: THE REMOVE FUNCTION PROVIDED BY THIS SCIRPT IS STILL INCOMPLETE AND COULD POTENTIALLY WIPE YOUR ENTIRE DEVICE.I AM NOT RESPONSIBLE FOR ANY IMPROPER USE OF IT" "$WHITE"
+echo -e "$RED""\nWARNING: THIS SCRIPT ALLOWS THE INSTALLATION OF FOUR DISTRIBUTIONS BUT ONLY UBUNTU AND DEBIAN ARE SUPPORTED WORKING COMPLETELY FOR NOW." "$WHITE"
 sleep 4
 clear
-
-
-echo    "**********************************************"
-echo    "#                                            #"
-echo -e "#           $RED CHROOT-INSTALLER v0.1$WHITE           #"
-echo    "#                                            #"
-echo    "**********************************************"
-
 
 #create the various config directories if they don't exist
 mkdir -p $CONFIG_DIR
@@ -885,20 +879,20 @@ do
         	su -c busybox chroot $CHROOT_DIR "/bin/su - $USRNAME -c '/home/$USRNAME/scripts/install_box.sh'"
 		fi
 		#check if kernel has binfmt_misc support and in case install right dependencies 
-		  if [ -d /proc/sys/fs/binfmt_misc ] && [ "$PACKAGEMANAGER" == "apt" ]
-		  then
-          		su -c busybox mount --bind /proc/sys/fs/binfmt_misc $CHROOT_DIR/proc/sys/fs/binfmt_misc
-          		echo -e "\nInstalling binfmt entries"
-          		su -c busybox chroot $CHROOT_DIR "/bin/su - root -c 'apt install binfmt-support -y'"
-          		su -c cp $INITIAL_CONFIGS_DIR/box86 $INITIAL_CONFIGS_DIR/box64  $CHROOT_DIR/usr/share/binfmts
-          		su -c busybox chroot $CHROOT_DIR "/bin/su - root -c '/usr/sbin/update-binfmts --import'"
-           fi
-
-	fi
+		if [ -d /proc/sys/fs/binfmt_misc ] && [ "$PACKAGEMANAGER" == "apt" ]
+		then
+             su -c busybox mount --bind /proc/sys/fs/binfmt_misc $CHROOT_DIR/proc/sys/fs/binfmt_misc
+          	 echo -e "\nInstalling binfmt entries"
+          	 su -c busybox chroot $CHROOT_DIR "/bin/su - root -c 'apt install binfmt-support -y'"
+             su -c cp $INITIAL_CONFIGS_DIR/box86 $INITIAL_CONFIGS_DIR/box64  $CHROOT_DIR/usr/share/binfmts
+          	 su -c busybox chroot $CHROOT_DIR "/bin/su - root -c '/usr/sbin/update-binfmts --import'"
+        fi
+     fi
 done
 
-echo -e "Unpacking GPU-acceleration ready Mesa libs"
+echo -e "Unpacking GPU-acceleration ready Mesa libs, copying gpuswitch script"
 
+su -c rm -rf $CHROOT_DIR/home/$USRNAME/mesa32 $CHROOT_DIR/home/$USRNAME/mesa64
 su -c busybox tar -Jxvf $EXTRA_CONFIGS_DIR/mesa32-turnip-zink-virgl-23.2.0.tar.xz -C $CHROOT_DIR
 su -c busybox tar -Jxvf $EXTRA_CONFIGS_DIR/mesa64-turnip-zink-virgl-23.2.0.tar.xz -C $CHROOT_DIR
 su -c cp $CHROOT_DIR/home/$USRNAME/scripts/gpuswitch $CHROOT_DIR/usr/bin
@@ -987,12 +981,14 @@ echo -e "Arch                              $archstatus"
 
 }
 
-#Waiting for public release to update it
+#TODO
 update(){
 
 #git clone 
-chmod +x chroot-installer
-mv chroot-installer $PATH
+#chmod +x chroot-installer
+#mv chroot-installer $PATH
+
+echo -e "TODO"
 	
 }
 
@@ -1033,18 +1029,12 @@ column2=(
 argcolumn1=("containername" "path" "distro")
 argcolumn2=("arbitrary container name of user's choice" "full path to the custom rootfs, to use only with --custom option" "name of the distro to install" )
 
-echo -e "chroot-installer: chroot-installer [install|remove|update|list|help|--version] containername distro|[--custom] path [-b,-d]"
-echo -e "\nScript thath help to install and remove chroot containers for rooted device with busybox installed.\n"
-echo -e "\nOptions:\n"
-paste <(printf "%-20s\n" "${column1[@]}") <(printf "%-20s\n" "${column2[@]}")
-echo -e "\nArguments:\n"
-paste <(printf "%-20s\n" "${argcolumn1[@]}") <(printf "%20s\n" "${argcolumn2[@]}")
-
+echo -e "TODO"
 }
 
 if [[ "$(su -c busybox)" =~ "not found" ]]
 then
-    echo "Busybox not available,please install busybox before using this installer"
+    echo "Busybox not available,please install busybox before using this script"
     exit 0
 fi
 

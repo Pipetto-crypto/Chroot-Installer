@@ -15,5 +15,7 @@ virgl)
         export GALLIUM_DRIVER=virpipe
         export LIBGL_ALWAYS_SOFTWARE=1
         ;;
+*)
+        echo "Usage: source gpuswitch [zink|llvmpipe|virgl]"
 esac
 
