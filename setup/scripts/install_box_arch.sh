@@ -47,7 +47,7 @@ echo -e "Installing wine with wineswitch script"
 
 mkdir -p $HOME/.local/wineprefix
 mkdir -p $HOME/.local/wineprefix64
-if [ "$ARCH" == "aarch64" ] || [ "$(echo $OPMODES)" == "32-bit, 64-bit" ];then wineswitch $VERSION x86;else wineswitch $VERSION amd64;fi
+if [ "$ARCH" == "aarch64" ] || [ "$(echo $OPMODES)" == "32-bit, 64-bit" ];then sudo wineswitch $VERSION x86;else sudo wineswitch $VERSION amd64;fi
 
 echo -e "Installing bash_x86 and bash_x64"
 

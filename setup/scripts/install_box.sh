@@ -39,7 +39,7 @@ echo -e "\nInstalling wine with wineswitch script"
 
 mkdir -p $HOME/.local/wineprefix
 mkdir -p $HOME/.local/wineprefix64
-wineswitch $VERSION uni
+sudo wineswitch $VERSION uni
 
 echo -e "\nInstalling bash_x86 and bash_x64"
 
