@@ -35,18 +35,11 @@ sudo ln -f /usr/local/bin/box64 /usr/bin/box64
 
 fi
 
-echo -e "\nCopying wine wrappers and winswitch script, installing wine"
+echo -e "\nInstalling wine with wineswitch script"
 
 mkdir -p $HOME/.local/wineprefix
 mkdir -p $HOME/.local/wineprefix64
-sudo mv $HOME/scripts/wineswitch  $HOME/scripts/wine $HOME/scripts/wine64 /usr/bin
-sudo chmod +x /usr/bin/wineswitch /usr/bin/wine /usr/bin/wine64
 wineswitch $VERSION uni
-
-echo -e "\nCopying install_dxvk and remove_dxvk scripts"
-
-sudo mv $HOME/scripts/install_dxvk $HOME/scripts/remove_dxvk /usr/bin
-sudo chmod +x /usr/bin/install_dxvk /usr/bin/remove_dxvk
 
 echo -e "\nInstalling bash_x86 and bash_x64"
 

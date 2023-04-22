@@ -43,18 +43,11 @@ else
 fi
 
 
-echo -e "Copying wine wrappers and wineswitch script, installing wine"
+echo -e "Installing wine with wineswitch script"
 
 mkdir -p $HOME/.local/wineprefix
 mkdir -p $HOME/.local/wineprefix64
-sudo mv $HOME/scripts/wineswitch  $HOME/scripts/wine $HOME/scripts/wine64 /usr/bin
-sudo chmod +x /usr/bin/wineswitch /usr/bin/wine /usr/bin/wine64
 if [ "$ARCH" == "aarch64" ] || [ "$(echo $OPMODES)" == "32-bit, 64-bit" ];then wineswitch $VERSION x86;else wineswitch $VERSION amd64;fi
-
-echo -e "\nCopying install_dxvk and remove_dxvk scripts"
-
-sudo mv $HOME/scripts/install_dxvk $HOME/scripts/remove_dxvk /usr/bin
-sudo chmod +x /usr/bin/install_dxvk /usr/bin/remove_dxvk
 
 echo -e "Installing bash_x86 and bash_x64"
 

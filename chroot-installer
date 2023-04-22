@@ -654,6 +654,14 @@ su -c mkdir -p $CHROOT_DIR/home/$USRNAME/scripts
 su -c cp $SCRIPTS_DIR/* $BOX_CONFIGS_DIR/* $CHROOT_DIR/home/$USRNAME/scripts
 su -c chmod -R a+rwx $CHROOT_DIR/home/$USRNAME/scripts
 
+echo -e "\nCopying additional extra scripts"
+
+wget -P ~
+su -c mv ~/update $CHROOT_DIR/usr/bin
+su -c chmod +x $CHROOT_DIR/usr/bin/update
+su -c busybox chroot $CHROOT_DIR "/usr/bin/sudo -u root /usr/bin/update"
+
+
 if [ "${argslist[3]}" == "--custom" ]
 then
      echo -e "\nInstallation completed, exiting"
@@ -895,8 +903,6 @@ echo -e "Unpacking GPU-acceleration ready Mesa libs, copying gpuswitch script"
 su -c rm -rf $CHROOT_DIR/home/$USRNAME/mesa32 $CHROOT_DIR/home/$USRNAME/mesa64
 su -c busybox tar -Jxvf $EXTRA_CONFIGS_DIR/mesa32-turnip-zink-virgl-23.2.0.tar.xz -C $CHROOT_DIR
 su -c busybox tar -Jxvf $EXTRA_CONFIGS_DIR/mesa64-turnip-zink-virgl-23.2.0.tar.xz -C $CHROOT_DIR
-su -c cp $CHROOT_DIR/home/$USRNAME/scripts/gpuswitch $CHROOT_DIR/usr/bin
-su -c chmod +x $CHROOT_DIR/usr/bin/gpuswitch 
 
 echo -e "\nFirst setup completed, stopping the chroot"
 
