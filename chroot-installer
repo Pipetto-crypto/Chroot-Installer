@@ -639,12 +639,12 @@ echo "USERNAME=$USRNAME" >> $CONFIG_FILE
   
 if [ "$PACKAGEMANAGER" == "pacman" ]
 then
-     su -c busybox chroot $CHROOT_DIR '/bin/su - root -c "pacman -Syu --noconfirm && pacman -S --noconfirm sudo wget gnupg"'
+     su -c busybox chroot $CHROOT_DIR '/bin/su - root -c "pacman -Syu --noconfirm && pacman -S --noconfirm sudo wget gnupg git"'
   
 elif [ "$PACKAGEMANAGER" == "apt" ]
 then
      su -c busybox chroot $CHROOT_DIR "/usr/sbin/usermod -g 3003 _apt"
-     su -c busybox chroot $CHROOT_DIR '/bin/su - root -c "apt update && apt install sudo wget gnupg2 -y"'
+     su -c busybox chroot $CHROOT_DIR '/bin/su - root -c "apt update && apt install sudo wget gnupg2 git -y"'
 
 fi
 
@@ -656,7 +656,7 @@ su -c chmod -R a+rwx $CHROOT_DIR/home/$USRNAME/scripts
 
 echo -e "\nCopying additional extra scripts"
 
-wget -P ~
+wget https://raw.githubusercontent.com/Pipetto-crypto/3in1ProotX86Emus/master/scripts/update -P ~
 su -c mv ~/update $CHROOT_DIR/usr/bin
 su -c chmod +x $CHROOT_DIR/usr/bin/update
 su -c busybox chroot $CHROOT_DIR "/usr/bin/sudo -u root /usr/bin/update"
@@ -901,8 +901,8 @@ done
 echo -e "Unpacking GPU-acceleration ready Mesa libs, copying gpuswitch script"
 
 su -c rm -rf $CHROOT_DIR/home/$USRNAME/mesa32 $CHROOT_DIR/home/$USRNAME/mesa64
-su -c busybox tar -Jxvf $EXTRA_CONFIGS_DIR/mesa32-turnip-zink-virgl-23.2.0.tar.xz -C $CHROOT_DIR
-su -c busybox tar -Jxvf $EXTRA_CONFIGS_DIR/mesa64-turnip-zink-virgl-23.2.0.tar.xz -C $CHROOT_DIR
+su -c busybox tar -Jxvf $EXTRA_CONFIGS_DIR/mesa32-turnip-zink-virgl-23.2.0.tar.xz -C $CHROOT_DIR/home/$USRNAME
+su -c busybox tar -Jxvf $EXTRA_CONFIGS_DIR/mesa64-turnip-zink-virgl-23.2.0.tar.xz -C $CHROOT_DIR/home/$USRNAME
 
 echo -e "\nFirst setup completed, stopping the chroot"
 
