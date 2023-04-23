@@ -18,7 +18,6 @@ sudo apt install mesa-*:armhf zenity:armhf libasound*:armhf libstdc++6:armhf -y
 sudo wget https://ryanfortner.github.io/box86-debs/box86.list -O /etc/apt/sources.list.d/box86.list
 wget -qO- https://ryanfortner.github.io/box86-debs/KEY.gpg | sudo gpg --dearmor -o /etc/apt/trusted.gpg.d/box86-debs-archive-keyring.gpg 
 sudo apt update && sudo apt install box86-android:armhf -y
-sudo ln -f /usr/local/bin/box86 /usr/bin/box86
 
 fi
 
@@ -31,7 +30,6 @@ sudo apt install mesa-* zenity* gcc-multilib-x86-64-linux-gnu bc file xz-utils -
 sudo wget https://ryanfortner.github.io/box64-debs/box64.list -O /etc/apt/sources.list.d/box64.list
 wget -qO- https://ryanfortner.github.io/box64-debs/KEY.gpg | sudo gpg --dearmor -o /etc/apt/trusted.gpg.d/box64-debs-archive-keyring.gpg 
 sudo apt update && sudo apt install box64-android -y
-sudo ln -f /usr/local/bin/box64 /usr/bin/box64
 
 fi
 

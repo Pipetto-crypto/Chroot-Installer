@@ -25,7 +25,6 @@ then
 		make -j4
 		sudo make install
 		cd ~
-		sudo ln -f /usr/local/bin/box64 /usr/bin/box64
 	fi
 else
 	if ! ls -l /usr/local/bin | grep -q box86
@@ -38,7 +37,6 @@ else
 		make -j4
 		sudo make install
 		cd ~
-		sudo ln -f /usr/local/bin/box86 /usr/bin/box86
 	fi
 fi
 
@@ -47,7 +45,7 @@ echo -e "Installing wine with wineswitch script"
 
 mkdir -p $HOME/.local/wineprefix
 mkdir -p $HOME/.local/wineprefix64
-if [ "$ARCH" == "aarch64" ] || [ "$(echo $OPMODES)" == "32-bit, 64-bit" ];then sudo wineswitch $VERSION x86;else sudo wineswitch $VERSION amd64;fi
+if [ "$ARCH" == "aarch64" ] || [ "$(echo $OPMODES)" == "32-bit, 64-bit" ];then sudo wineswitch $VERSION amd64;else sudo wineswitch $VERSION x86;fi
 
 echo -e "Installing bash_x86 and bash_x64"
 
