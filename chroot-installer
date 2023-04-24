@@ -671,7 +671,7 @@ then
      exit
 fi
 
-su -c busybox chroot /data/local/mnt '/usr/bin/echo "$USRNAME ALL=(ALL) NOPASSWD:ALL" >> $CHROOT_DIR/etc/sudoers'
+su -c busybox chroot $CHROOT_DIR '/usr/bin/echo "$USRNAME ALL=(ALL) NOPASSWD:ALL" >> $CHROOT_DIR/etc/sudoers'
 su -c busybox chroot $CHROOT_DIR "/bin/sudo -u $USRNAME /home/$USRNAME/scripts/setup_env.sh"
 
 
@@ -853,11 +853,42 @@ do
      fi
 done
 
-echo -e "Unpacking GPU-acceleration ready Mesa libs, copying gpuswitch script"
+case "${argslist[3]}" in
+ubuntu)
+     echo -e "\nUnpacking Turnip,Zink and virgl ready Mesa libs"
+     su -c rm -rf $CHROOT_DIR/home/$USRNAME/mesa32 $CHROOT_DIR/home/$USRNAME/mesa64
+     su -c busybox tar -Jxvf $EXTRA_CONFIGS_DIR/mesa32-turnip-zink-virgl-23.2.0.tar.xz -C $CHROOT_DIR/home/$USRNAME
+     su -c busybox tar -Jxvf $EXTRA_CONFIGS_DIR/mesa64-turnip-zink-virgl-23.2.0.tar.xz -C $CHROOT_DIR/home/$USRNAME
+     su -c busybox chroot $CHROOT_DIR '/usr/bin/echo "LIBGL_DRIVERS_PATH=~/mesa64/dri:~/mesa32/dri" >> $CHROOT_DIR/etc/profile'
+     su -c busybox chroot $CHROOT_DIR '/usr/bin/echo "VK_ICD_FILENAMES=~/mesa64/freedreno_icd.aarch64.json:~/mesa32/freedreno_icd.armhf.json" >> $CHROOT_DIR/etc/profile'
+     su -c busybox chroot $CHROOT_DIR '/usr/bin/echo "MESA_VK_WSI_DEBUG=sw" >> $CHROOT_DIR/etc/profile'
+     ;;
+arch)
+     echo -e "\nUnpacking Turnip driver"
+     su -c rm -rf $CHROOT_DIR/home/$USRNAME/mesa32 $CHROOT_DIR/home/$USRNAME/mesa64
+     su -c busybox tar -Jxvf $EXTRA_CONFIGS_DIR/mesa64-turnip-zink-virgl-23.2.0.tar.xz mesa64/freedreno_icd.aarch64.json mesa64/libvulkan_freedreno.so -C $CHROOT_DIR/home/$USRNAME
+     su -c busybox tar -Jxvf $EXTRA_CONFIGS_DIR/mesa32-turnip-zink-virgl-23.2.0.tar.xz mesa32/freedreno_icd.armhf.json mesa32/libvulkan_freedreno.so -C $CHROOT_DIR/home/$USRNAME
+     su -c busybox chroot $CHROOT_DIR '/usr/bin/echo "VK_ICD_FILENAMES=~/mesa64/freedreno_icd.aarch64.json:~/mesa32/freedreno_icd.armhf.json" >> $CHROOT_DIR/etc/profile'
+     su -c busybox chroot $CHROOT_DIR '/usr/bin/echo "MESA_VK_WSI_DEBUG=sw" >> $CHROOT_DIR/etc/profile'
+     ;;
+manjaro)
+     echo -e "\nUnpacking Turnip,Zink and virgl ready Mesa libs"
+     su -c rm -rf $CHROOT_DIR/home/$USRNAME/mesa64
+     su -c busybox tar -Jxvf $EXTRA_CONFIGS_DIR/mesa64-turnip-zink-virgl-23.2.0.tar.xz -C $CHROOT_DIR/home/$USRNAME
+     su -c busybox chroot $CHROOT_DIR '/usr/bin/echo "LIBGL_DRIVERS_PATH=~/mesa64/dri" >> $CHROOT_DIR/etc/profile'
+     su -c busybox chroot $CHROOT_DIR '/usr/bin/echo "VK_ICD_FILENAMES=~/mesa64/freedreno_icd.aarch64.json" >> $CHROOT_DIR/etc/profile'
+     su -c busybox chroot $CHROOT_DIR '/usr/bin/echo "MESA_VK_WSI_DEBUG=sw" >> $CHROOT_DIR/etc/profile'
+     ;;
+debian)
+     echo -e "\nUnpacking Turnip driver"
+     su -c rm -rf $CHROOT_DIR/home/$USRNAME/mesa32 $CHROOT_DIR/home/$USRNAME/mesa64
+     su -c busybox tar -Jxvf $EXTRA_CONFIGS_DIR/mesa64-turnip-zink-virgl-23.2.0.tar.xz mesa64/freedreno_icd.aarch64.json mesa64/libvulkan_freedreno.so -C $CHROOT_DIR/home/$USRNAME
+     su -c busybox tar -Jxvf $EXTRA_CONFIGS_DIR/mesa32-turnip-zink-virgl-23.2.0.tar.xz mesa32/freedreno_icd.armhf.json mesa32/libvulkan_freedreno.so -C $CHROOT_DIR/home/$USRNAME
+     su -c busybox chroot $CHROOT_DIR '/usr/bin/echo "VK_ICD_FILENAMES=~/mesa64/freedreno_icd.aarch64.json:~/mesa32/freedreno_icd.armhf.json" >> $CHROOT_DIR/etc/profile'
+     su -c busybox chroot $CHROOT_DIR '/usr/bin/echo "MESA_VK_WSI_DEBUG=sw" >> $CHROOT_DIR/etc/profile'
+     ;;
+esac
 
-su -c rm -rf $CHROOT_DIR/home/$USRNAME/mesa32 $CHROOT_DIR/home/$USRNAME/mesa64
-su -c busybox tar -Jxvf $EXTRA_CONFIGS_DIR/mesa32-turnip-zink-virgl-23.2.0.tar.xz -C $CHROOT_DIR/home/$USRNAME
-su -c busybox tar -Jxvf $EXTRA_CONFIGS_DIR/mesa64-turnip-zink-virgl-23.2.0.tar.xz -C $CHROOT_DIR/home/$USRNAME
 
 echo -e "\nFirst setup completed, stopping the chroot"
 
