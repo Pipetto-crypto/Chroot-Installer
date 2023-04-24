@@ -1,8 +1,8 @@
 # Chroot-Installer
 
-A script to install chroot containers on Android with termux. Most of this README is a WIP
+A script to install chroot containers on Android through Termux. This README is like this installer mostly a huge WIP and some stuffs don't work correctly yet.
 
-Installation of a container named Ubuntu where you want to install Ubuntu distribution with box86/64(-b) and a DE(-d):
+Installation of a container named Ubuntu in which installing Ubuntu distribution with box86/64(-b) and a DE(-d):
 
 bash chroot-installer install Ubuntu ubuntu -b -d
 
@@ -23,3 +23,8 @@ Stop the container:
 
 bash chroot-installer stop
 
+CREDITS AND LINKS:
+
+This script is the chroot version of my other project. So credits and links are similiar
+
+https://github.com/Pipetto-crypto/3in1ProotX86Emus
