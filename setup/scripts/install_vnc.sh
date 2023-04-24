@@ -17,7 +17,7 @@ xfce)
          sudo apt install tigervnc-standalone-server tigervnc-common dbus-x11 tigervnc-xorg-extension xfce4 xfce4-goodies xvfb xwayland -y
          ;;
     pacman)
-         sudo pacman -S --noconfirm tigervnc dbus xfce4 xfce4-goodies xorg-server-xvfb xwayland
+         sudo pacman -S --noconfirm tigervnc dbus xfce4 xfce4-goodies xorg-server-xvfb xorg-xwayland
          ;;   
    esac
    ;;
@@ -27,7 +27,7 @@ lxqt)
         sudo apt install tigervnc-standalone-server tigervnc-common dbus-x11 xvfb xwayland tigervnc-xorg-extension lxqt -y
         ;;
     pacman)
-        sudo pacman -S --noconfirm xorg-server-xvfb xwayland tigervnc dbus lxqt
+        sudo pacman -S --noconfirm xorg-server-xvfb xorg-xwayland tigervnc dbus lxqt papirus-icon-theme breeze-icons
         ;;
    esac
    ;;
@@ -37,7 +37,7 @@ icewm)
         sudo apt install tigervnc-standalone-server xvfb xwayland tigervnc-common dbus-x11 tigervnc-xorg-extension icewm -y
         ;;
     pacman)
-        sudo pacman -S --noconfirm xorg-server-xvfb xwayland tigervnc dbus icewm xorg-fonts-misc xterm
+        sudo pacman -S --noconfirm xorg-server-xvfb xorg-xwayland tigervnc dbus icewm xorg-fonts-misc xterm
         ;;
    esac
    ;;
@@ -47,11 +47,11 @@ fluxbox)
          sudo apt install xwayland xvfb tigervnc-standalone-server tigervnc-common dbus-x11 tigervnc-xorg-extension fluxbox xterm -y 
          ;;
      pacman)
-         sudo pacman -S --noconfirm xorg-server-xvfb xwayland tigervnc dbus fluxbox xterm 
+         sudo pacman -S --noconfirm xorg-server-xvfb xorg-xwayland tigervnc dbus fluxbox xterm 
          ;;
     esac
     ;;
-;;
+esac
 
 mkdir -p $HOME/.vnc
 touch $HOME/.vnc/xstartup

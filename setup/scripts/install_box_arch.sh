@@ -9,7 +9,7 @@ OPMODES=$(lscpu | grep  "CPU op-mode" | awk -F ":" '{print $2}')
 
 echo -e "Installing required dependencies dependencies"
 
-sudo pacman -S mesa zenity libasound base-devel git cmake python3 bc file xz --needed --noconfirm
+sudo pacman -S mesa zenity alsa-lib base-devel git cmake python3 bc file xz --needed --noconfirm
 
 if [ "$ARCH" == "aarch64" ] || [ "$(echo $OPMODES)" == "32-bit, 64-bit" ]
 then
@@ -41,11 +41,12 @@ else
 fi
 
 
-echo -e "Installing wine with wineswitch script"
-
-mkdir -p $HOME/.local/wineprefix
-mkdir -p $HOME/.local/wineprefix64
-if [ "$ARCH" == "aarch64" ] || [ "$(echo $OPMODES)" == "32-bit, 64-bit" ];then sudo wineswitch $VERSION amd64;else sudo wineswitch $VERSION x86;fi
+if [ "$ARCH" == "armv7l" ] 
+then
+     echo -e "Installing wine with wineswitch script"
+     mkdir -p $HOME/.local/wineprefix
+     sudo wineswitch $VERSION x86
+fi
 
 echo -e "Installing bash_x86 and bash_x64"
 
@@ -53,10 +54,12 @@ mkdir -p $HOME/box_bash
 sudo chmod +x scripts/bash_x64
 mv scripts/bash_x64 $HOME/box_bash
 
-echo -e "Installing winetricks"
-
-sudo mv scripts/winetricks /usr/bin
-sudo chmod +x /usr/bin/winetricks
+if [ "$ARCH" == "armv7l" ]
+then
+     echo -e "Installing winetricks"
+     sudo mv scripts/winetricks /usr/bin
+     sudo chmod +x /usr/bin/winetricks
+fi
 
 echo -e "Cleaning up"
 

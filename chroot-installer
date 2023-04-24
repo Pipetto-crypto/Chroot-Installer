@@ -623,7 +623,7 @@ then
      if [ "$SUCCESS1" == "true" ] && [ "$SUCCESS2" == "true" ]
 	 then
 		  su -c busybox chroot $CHROOT_DIR "/usr/sbin/usermod -aG aid_inet,aid_net_raw,aid_net_admin,aid_net_bt,aid_net_bt_admin $USRNAME"
-		  if [ "${argslist[3]}" == "manjaro" ]
+		  if [ "${argslist[3]}" == "manjaro" ] || [ "${argslist[3]}" == "arch" ]
 		  then
 			   su -c busybox chroot $CHROOT_DIR "/usr/sbin/usermod -aG wheel $USRNAME"
 		  else
@@ -671,6 +671,7 @@ then
      exit
 fi
 
+su -c busybox chroot /data/local/mnt '/usr/bin/echo "$USRNAME ALL=(ALL) NOPASSWD:ALL" >> $CHROOT_DIR/etc/sudoers'
 su -c busybox chroot $CHROOT_DIR "/bin/sudo -u $USRNAME /home/$USRNAME/scripts/setup_env.sh"
 
 
