@@ -35,6 +35,6 @@ For now supported distributions are Debian, Ubuntu, Arch and Manjaro.
 
 # Credits and Links
 
-This script is the chroot version of my other project. So credits and links are similiar
+This script is the chroot version of my other project so credits and links are similiar
 
 https://github.com/Pipetto-crypto/3in1ProotX86Emus
