@@ -2,6 +2,12 @@
 
 A script to install chroot containers on Android through Termux. This README is like this installer mostly a huge WIP and some stuffs don't work correctly yet.
 
+# Requirments
+
+You need to have busybox installed and accesible. Termux:X11 is not a requirment but it is highly recommended to install it from links.
+
+# Basic Usage
+
 Installation of a container named Ubuntu in which installing Ubuntu distribution with box86/64(-b) and a DE(-d):
 
 bash chroot-installer install Ubuntu ubuntu -b -d
@@ -23,7 +29,11 @@ Stop the container:
 
 bash chroot-installer stop
 
-CREDITS AND LINKS:
+Some of the sepcific commands you can execute inside the chroot can be found in the "Useful proot commands" section of the project in the links.
+
+For now supported distributions are Debian, Ubuntu, Arch and Manjaro. 
+
+# Credits and Links
 
 This script is the chroot version of my other project. So credits and links are similiar
 
