@@ -32,7 +32,7 @@ bash chroot-installer stop
 
 Some of the sepcific commands you can execute inside the chroot can be found in the "Useful proot commands" section of the project in the links.
 
-For now supported distributions are Debian, Ubuntu, Arch and Manjaro. 
+For now supported distributions are Debian, Ubuntu, Arch and Manjaro but Debian doesn't have hardware acceleration and Manjaro and Arch have some minor issues.
 
 # Credits and Links
 
