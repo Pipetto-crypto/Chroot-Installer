@@ -15,6 +15,7 @@ bash chroot-installer install Ubuntu ubuntu -b -d
 Run the previously installed container:
 
 bash chroot-installer start | if it's the only one installed or the one you want to launch is the default one
+
 bash chroot-installer start Ubuntu | if you have more than one installed and the one you want to start isn't the default 
 
 Run the container with Termux:X11/XVFB and virglrenderer-android:
