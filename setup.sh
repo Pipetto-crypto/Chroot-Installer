@@ -1,5 +1,6 @@
 #!/bin/bash
 
+cd ~
 echo -e "\nInstalling all dependencies and setting up storage permissions\n"
 
 pkg update
@@ -11,4 +12,5 @@ then
     termux-setup-storage
 fi
 
-echo -e "TODO: Automatic installation of Termux:X11, automatic clone of the repository"
+git clone https://github.com/Pipetto-crypto/Chroot-Installer.git
+cd Chroot-Installer
