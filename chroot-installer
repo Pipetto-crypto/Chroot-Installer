@@ -72,6 +72,7 @@ fi
 #Function to allow editing config files
 edit-config(){
 
+CONFIG_FILE=$CONTAINERS_DIR/${argslist[3]}.conf
 if [ ! -f $CONTAINERS_DIR/$LAST_ARGUMENT.conf ]
 then
 	echo "No valid container has been provided, leaving now"
