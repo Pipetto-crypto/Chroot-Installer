@@ -107,6 +107,25 @@ start-stop-daemon --quiet --background --user $(id -u) --make-pidfile --pidfile 
 sleep 4
 su -c busybox chroot $CHROOT_DIR "/usr/sbin/start-stop-daemon --quiet --background --make-pidfile --pidfile $XVFB_PID --start --exec $XVFB -- $XVFB_ARGS"
 
+}
+
+vnc_server(){
+
+
+su -c rm -rf $CHROOT_DIR/tmp/.X0-lock
+read -p "Select a sceeen size: " SCREENSIZE
+XVNC_PID=/var/run/Xvnc.pid
+XVNC=/usr/bin/Xvnc
+if [ "$USRNAME" == "root" ]
+then
+     XVNC_AUTH=/root/.vnc/passwd
+else
+     XVNC_AUTH=/home/$USRNAME/.vnc/passwd
+fi
+XVNC_ARGS=":0 -rfbport 5900 -rfbauth $XVNC_AUTH -geometry $SCREENSIZE -noreset"
+echo -e "\nStarting the VNC server"
+sleep 3
+su -c busybox chroot $CHROOT_DIR "/usr/sbin/start-stop-daemon --quiet --background --make-pidfile --pidfile $XVNC_PID --start --exec $XVNC -- $XVNC_ARGS"
 
 }
 
@@ -396,7 +415,12 @@ then
 	
 	if check_parameters "-v" "${argslist[*]}"
 	then
-	        virgl_server #calls the xserver function if the -x option
+	        virgl_server #calls the virgl_server function if the -v option is provided
+	fi
+
+	if check_parameters "-vnc" "${argslist[*]}"
+	then
+	     vnc_server #calls the vnc_server function if the -vnc option is provided
 	fi
 	
 	echo -e "\nAll preparations completed, connecting now\n"
@@ -445,17 +469,20 @@ rm -rf $CONFIG_DIR/running.txt
 if findmnt $CHROOT_DIR >/dev/null
 then
     XVFB_PID=$CHROOT_DIR/run/Xvfb.pid
+    XVNC_PID=$CHROOT_DIR/run/Xvnc.pid
     XWAYLAND_PID=$CHROOT_DIR/run/Xwayland.pid
     TERMUX_X11_PID=$PREFIX/var/run/termux-x11.pid
     VIRGL_ANDROID_PID=$PREFIX/var/run/virgl_test_server_android.pid
 	#kill running processes spawned by this script if they exist
 	if [ -f $TERMUX_X11_PID ];then start-stop-daemon --stop --pidfile $TERMUX_X11_PID;fi
 	if [ -f $XVFB_PID ];then su -c $PATH/start-stop-daemon --stop --pidfile $XVFB_PID;fi
+	if [ -f $XVNC_PID ];then su -c $PATH/start-stop-daemon --stop --pidfile $XVNC_PID;fi
 	if [ -f $XWAYLAND_PID ];then su -c $PATH/start-stop-daemon --stop --pidfile $XWAYLAND_PID;fi
 	if [ -f $VIRGL_ANDROID_PID ];then $PATH/start-stop-daemon --stop --pidfile $VIRGL_ANDROID_PID;fi
     #deleting pidfiles
     rm -rf $TERMUX_X11_PID
     su -c rm -rf $XVFB_PID
+    su -c rm -rf $XVNC_PID
     su -c rm -rf $XWAYLAND_PID
     rm -rf $VIRGL_ANDROID_PID
     #set back right permissions for termux tmp dir
