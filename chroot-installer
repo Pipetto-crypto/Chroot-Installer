@@ -183,6 +183,26 @@ return $exitcode
 
 }
 
+#function that return an index when paramater matches
+get_index_if_match(){
+
+for i in $1
+do
+        position=1
+        hasfound=false
+        for e in $2
+        do
+                if [ "$i" == "$e" ]
+                then
+      			hasfound=true
+                        break 2
+                fi
+        position=$((position+1))
+        done
+done
+if [ "$hasfound" == "true" ];then echo $position;fi
+
+}
 
 
 #function that start the chroot
@@ -198,6 +218,10 @@ then
 	fi
 fi		
 
+#check if -cores option has been used else set affinity to big cores
+coresin=$(get_index_if_match "-cores" "${argslist[*]}")
+if [ "$coresin" == "" ];then cores="4-7";else cores=${argslist[$((coresin+1))]};fi
+taskset -a -pc $cores $thispid >/dev/null 2>&1
 
 
 containerslist=$(list-containers)
